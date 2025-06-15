@@ -113,21 +113,17 @@ export default function Generate() {
 
       const responseData = await response.json();
       
-      setGenerationState({
-        status: 'completed',
-        progress: 100,
-        csvData: {
-          csvBase64: responseData.csvBase64,
-          filename: responseData.filename || 'xauti-content.csv'
-        }
-      });
-
-      // Content generation completed successfully
-
-      toast({
-        title: "Success!",
-        description: "Your content has been generated successfully.",
-      });
+      if (responseData.success && responseData.requestId) {
+        // Start polling for status updates
+        pollForCompletion(responseData.requestId);
+        
+        toast({
+          title: "Generation Started",
+          description: "Your content generation has started. Please wait...",
+        });
+      } else {
+        throw new Error('Failed to start content generation');
+      }
 
     } catch (error) {
       console.error('Content generation error:', error);
@@ -147,6 +143,85 @@ export default function Generate() {
         variant: "destructive",
       });
     }
+  };
+
+  const pollForCompletion = async (requestId: number) => {
+    const maxAttempts = 60; // Poll for up to 10 minutes (every 10 seconds)
+    let attempts = 0;
+    
+    const poll = async () => {
+      try {
+        attempts++;
+        
+        const response = await fetch(`/api/content-status/${requestId}`);
+        if (!response.ok) {
+          throw new Error('Failed to check status');
+        }
+        
+        const statusData = await response.json();
+        
+        if (statusData.status === 'completed' && statusData.csvData) {
+          setGenerationState({
+            status: 'completed',
+            progress: 100,
+            csvData: statusData.csvData
+          });
+          
+          toast({
+            title: "Success!",
+            description: "Your content has been generated successfully.",
+          });
+          return;
+        } else if (statusData.status === 'failed') {
+          setGenerationState({
+            status: 'failed',
+            progress: 100,
+            error: statusData.error || 'Content generation failed'
+          });
+          
+          toast({
+            title: "Error",
+            description: statusData.error || "Content generation failed. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        } else if (statusData.status === 'processing') {
+          // Still processing, continue polling
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 10000); // Poll every 10 seconds
+          } else {
+            // Timeout after max attempts
+            setGenerationState({
+              status: 'failed',
+              progress: 100,
+              error: 'Generation timeout - took longer than expected'
+            });
+            
+            toast({
+              title: "Timeout",
+              description: "Content generation is taking longer than expected. Please try again or contact support.",
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        setGenerationState({
+          status: 'failed',
+          progress: 100,
+          error: 'Failed to check generation status'
+        });
+        
+        toast({
+          title: "Error",
+          description: "Failed to check generation status. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    // Start polling
+    setTimeout(poll, 5000); // First check after 5 seconds
   };
 
   const downloadCSV = () => {
