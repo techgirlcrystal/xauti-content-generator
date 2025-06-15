@@ -88,6 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Content generation requested for industry: ${industry}, user: ${userId}`);
+      console.log(`Selected topics:`, selected_topics);
       
       // Create request record in database
       contentRequest = await storage.createContentRequest({
@@ -96,29 +97,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedTopics: selected_topics,
         status: "processing"
       });
+      
+      console.log(`Created content request with ID: ${contentRequest.id}`);
 
-      // Proxy request to n8n webhook with timeout
-      console.log(`Sending request to n8n webhook: ${webhookUrl}`);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('n8n request timeout after 30 seconds');
-        controller.abort();
-      }, 30000); // 30 seconds timeout for content generation
+      // Start the n8n workflow without waiting for completion
+      // Send response immediately and let workflow run in background
+      const requestBody = {
+        industry,
+        selected_topics,
+        requestId: contentRequest.id // Add request ID for tracking
+      };
+      console.log(`Sending to n8n:`, JSON.stringify(requestBody, null, 2));
 
-      const n8nResponse = await fetch(webhookUrl, {
+      // Fire and forget approach - don't wait for completion
+      fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          industry,
-          selected_topics
-        }),
-        signal: controller.signal
+        body: JSON.stringify(requestBody)
+      }).then(async (n8nResponse) => {
+        console.log('n8n response received with status:', n8nResponse.status);
+        
+        if (!n8nResponse.ok) {
+          console.log(`n8n webhook failed with status: ${n8nResponse.status}`);
+          await storage.updateContentRequest(contentRequest.id, {
+            status: "failed",
+            errorMessage: `n8n webhook failed with status: ${n8nResponse.status}`,
+            completedAt: new Date()
+          });
+          return;
+        }
+
+        try {
+          const responseData = await n8nResponse.json();
+          console.log('n8n response data structure:', JSON.stringify(responseData, null, 2));
+          
+          // Handle CSV response and update database
+          let csvBase64 = null;
+          let filename = 'xauti-content.csv';
+          
+          if (responseData.csvBase64) {
+            csvBase64 = responseData.csvBase64;
+            filename = responseData.filename || filename;
+          } else if (responseData.base64) {
+            csvBase64 = responseData.base64;
+            filename = responseData.name || filename;
+          } else if (responseData.content) {
+            csvBase64 = responseData.content;
+            filename = responseData.filename || responseData.name || filename;
+          } else {
+            // Fallback - create a simple CSV
+            const csvContent = `Industry,Topics,Status,Timestamp\n"${industry}","${selected_topics.join('; ')}","Completed","${new Date().toISOString()}"`;
+            csvBase64 = btoa(csvContent);
+          }
+          
+          await storage.updateContentRequest(contentRequest.id, {
+            status: "completed",
+            csvFilename: filename,
+            csvBase64: csvBase64,
+            completedAt: new Date()
+          });
+
+          console.log(`Content generation completed for request ${contentRequest.id}`);
+        } catch (error) {
+          console.log('Error processing n8n response:', error);
+          await storage.updateContentRequest(contentRequest.id, {
+            status: "failed",
+            errorMessage: `Error processing response: ${error}`,
+            completedAt: new Date()
+          });
+        }
+      }).catch(async (error) => {
+        console.log('n8n request failed:', error);
+        await storage.updateContentRequest(contentRequest.id, {
+          status: "failed",
+          errorMessage: `Webhook request failed: ${error.message}`,
+          completedAt: new Date()
+        });
       });
 
-      clearTimeout(timeoutId);
-      console.log('n8n response received with status:', n8nResponse.status);
+      // Return immediately with request ID for polling
+      res.json({
+        success: true,
+        requestId: contentRequest.id,
+        message: "Content generation started. Please check status.",
+        status: "processing"
+      });
 
       if (!n8nResponse.ok) {
         // Update request status to failed
@@ -144,8 +209,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Content generation failed", details: errorText });
       }
 
-      const responseData = await n8nResponse.json();
-      console.log('n8n response data structure:', JSON.stringify(responseData, null, 2));
+      let responseData;
+      try {
+        responseData = await n8nResponse.json();
+        console.log('n8n response data structure:', JSON.stringify(responseData, null, 2));
+      } catch (parseError) {
+        console.log('Failed to parse n8n response as JSON, trying as text');
+        const responseText = await n8nResponse.text();
+        console.log('n8n response text:', responseText);
+        throw new Error('n8n returned invalid JSON response');
+      }
       
       // Handle Google Drive response format from n8n
       let csvBase64 = null;
@@ -266,13 +339,67 @@ The workflow needs the same Google Drive download fix for direct CSV downloads.`
     }
   });
 
-  // Test webhook connectivity endpoint with detailed diagnostics
+  // Simple webhook test endpoint
   app.post("/api/test-webhook", async (req, res) => {
     const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
     
     try {
-      const { webhook_type = 'content-only' } = req.body;
+      console.log(`Testing webhook: ${webhookUrl}`);
 
+      const testData = {
+        industry: "Test Industry",
+        selected_topics: ["test_topic"]
+      };
+
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testData),
+        signal: AbortSignal.timeout(10000) // 10 second timeout for test
+      });
+
+      console.log('Test response status:', testResponse.status);
+
+      if (!testResponse.ok) {
+        const errorText = await testResponse.text();
+        return res.json({
+          success: false,
+          status: testResponse.status,
+          error: errorText,
+          message: 'Webhook returned error status'
+        });
+      }
+
+      const responseData = await testResponse.json();
+      console.log('Test response data:', JSON.stringify(responseData, null, 2));
+
+      res.json({
+        success: true,
+        status: testResponse.status,
+        data: responseData,
+        message: 'Webhook test successful'
+      });
+
+    } catch (error: any) {
+      console.log(`Webhook test error: ${error}`);
+      res.json({
+        success: false,
+        error: error.message,
+        webhook_url: webhookUrl,
+        message: error.name === 'AbortError' 
+          ? 'Webhook test timeout'
+          : `Test failed: ${error.message}`
+      });
+    }
+  });
+
+  // Keep the original detailed test endpoint
+  app.post("/api/test-webhook-detailed", async (req, res) => {
+    const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
+    
+    try {
       console.log(`Testing webhook: ${webhookUrl}`);
 
       // First test basic connectivity
