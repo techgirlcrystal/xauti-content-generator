@@ -185,157 +185,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      if (!n8nResponse.ok) {
-        // Update request status to failed
-        await storage.updateContentRequest(contentRequest.id, {
-          status: "failed",
-          errorMessage: `n8n webhook failed with status: ${n8nResponse.status}`,
-          completedAt: new Date()
-        });
-        
-        const errorText = await n8nResponse.text();
-        console.log(`n8n webhook error: ${errorText}`);
-        
-        // Provide specific error message for webhook issues
-        if (n8nResponse.status === 404) {
-          const webhookName = 'words-only';
-          return res.status(500).json({ 
-            error: "Webhook not found", 
-            details: `The ${webhookName} webhook is not active. Please activate your n8n workflow by clicking 'Execute workflow' in n8n, then try again.`,
-            webhook_url: webhookUrl
-          });
-        }
-        
-        return res.status(500).json({ error: "Content generation failed", details: errorText });
-      }
-
-      let responseData;
-      try {
-        responseData = await n8nResponse.json();
-        console.log('n8n response data structure:', JSON.stringify(responseData, null, 2));
-      } catch (parseError) {
-        console.log('Failed to parse n8n response as JSON, trying as text');
-        const responseText = await n8nResponse.text();
-        console.log('n8n response text:', responseText);
-        throw new Error('n8n returned invalid JSON response');
-      }
-      
-      // Handle Google Drive response format from n8n
-      let csvBase64 = null;
-      let filename = 'xauti-content.csv';
-      
-      // Check for different response formats
-      if (responseData.csvBase64) {
-        csvBase64 = responseData.csvBase64;
-        filename = responseData.filename || filename;
-      } else if (responseData.base64) {
-        csvBase64 = responseData.base64;
-        filename = responseData.name || filename;
-      } else if (responseData.content) {
-        csvBase64 = responseData.content;
-        filename = responseData.filename || responseData.name || filename;
-      } else if (responseData.kind === 'drive#file') {
-        // Google Drive response - fetch the actual file content
-        console.log('Detected Google Drive file response - fetching actual content');
-        
-        const downloadUrl = responseData.webContentLink;
-        filename = responseData.name || 'xauti-content.csv';
-        
-        // Google Drive files require authentication, so provide direct access instructions
-        console.log('Providing Google Drive download instructions');
-        
-        const workflowType = '30-day content';
-        const csvContent = `IMPORTANT: Your ${workflowType} has been generated successfully!
-
-File Details:
-- Name: ${filename}
-- Size: ${responseData.size} bytes
-- Created: ${responseData.createdTime}
-- Content Type: ${workflowType}
-
-DIRECT DOWNLOAD LINK:
-${downloadUrl}
-
-INSTRUCTIONS:
-1. Copy the link above
-2. Paste it in a new browser tab
-3. Your CSV file will download automatically
-
-TO FIX THIS FOR FUTURE GENERATIONS:
-Both your n8n workflows need the same update - add these nodes after creating the CSV:
-
-1. Add "Google Drive - Download" node
-   - Set File ID: {{$json["id"]}}
-   - Set Return Format: "File Content (Base64)"
-
-2. Update your "Respond to Webhook" node to return:
-   {
-     "csvBase64": "{{$json["data"]}}",
-     "filename": "{{$json["name"]}}"
-   }
-
-This applies to the content workflow:
-- Content workflow: https://n8n.srv847085.hstgr.cloud/webhook/words-only
-
-The workflow needs the same Google Drive download fix for direct CSV downloads.`;
-        
-        csvBase64 = btoa(csvContent);
-      } else {
-        // Fallback - convert entire response to CSV-like format
-        console.log('Unknown response format, creating fallback CSV');
-        const csvContent = `Industry,Topics,Status,Timestamp\n"${industry}","${selected_topics.join('; ')}","Completed","${new Date().toISOString()}"`;
-        csvBase64 = btoa(csvContent);
-      }
-      
-      // Update request status to completed
-      await storage.updateContentRequest(contentRequest.id, {
-        status: "completed",
-        csvFilename: filename,
-        csvBase64: csvBase64,
-        completedAt: new Date()
-      });
-
-      console.log(`Content generation completed for request ${contentRequest.id}`);
-      console.log(`Saved CSV data length: ${csvBase64?.length || 0}`);
-      
-      // Return the response data
-      res.json({
-        csvBase64: csvBase64,
-        filename: filename,
-        success: true
-      });
-
     } catch (error: any) {
       console.log(`Content generation error: ${error}`);
       
       // Update request status to failed if we have a request record
-      try {
-        if (contentRequest && contentRequest.id) {
+      if (contentRequest && contentRequest.id) {
+        try {
           await storage.updateContentRequest(contentRequest.id, {
             status: "failed",
-            errorMessage: `Workflow timeout or error: ${error?.message}`,
+            errorMessage: `Setup error: ${error?.message}`,
             completedAt: new Date()
           });
+        } catch (updateError) {
+          console.log('Failed to update request status:', updateError);
         }
-      } catch (updateError) {
-        console.log('Failed to update request status:', updateError);
       }
       
-      // Provide helpful error message based on error type
-      if (error.name === 'AbortError') {
-        res.status(500).json({ 
-          error: "Workflow timeout", 
-          details: `Your n8n workflow at ${webhookUrl} is not responding. Please check if your n8n workflow is active and properly configured.`,
-          troubleshooting: [
-            "1. Check if your n8n workflow is activated (not just saved)",
-            "2. Verify the webhook URL is correct",
-            "3. Test the webhook manually in n8n",
-            "4. Check for any errors in your n8n workflow execution logs"
-          ]
+      res.status(500).json({ 
+        error: "Setup failed", 
+        details: error?.message || "Failed to initialize content generation"
+      });
+    }
+  });
+
+  // Status checking endpoint for polling
+  app.get("/api/content-status/:requestId", async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const contentRequest = await storage.getContentRequest(parseInt(requestId));
+      
+      if (!contentRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      if (contentRequest.status === "completed" && contentRequest.csvBase64) {
+        res.json({
+          status: contentRequest.status,
+          csvData: {
+            csvBase64: contentRequest.csvBase64,
+            filename: contentRequest.csvFilename || 'xauti-content.csv'
+          },
+          completedAt: contentRequest.completedAt
         });
       } else {
-        res.status(500).json({ error: "Internal server error", details: error?.message });
+        res.json({
+          status: contentRequest.status,
+          error: contentRequest.errorMessage,
+          completedAt: contentRequest.completedAt
+        });
       }
+    } catch (error: any) {
+      console.log('Status check error:', error);
+      res.status(500).json({ error: "Failed to check status" });
     }
   });
 
@@ -395,98 +296,6 @@ The workflow needs the same Google Drive download fix for direct CSV downloads.`
     }
   });
 
-  // Keep the original detailed test endpoint
-  app.post("/api/test-webhook-detailed", async (req, res) => {
-    const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
-    
-    try {
-      console.log(`Testing webhook: ${webhookUrl}`);
-
-      // First test basic connectivity
-      const headResponse = await fetch(webhookUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-      
-      if (!headResponse.ok) {
-        return res.json({
-          webhook_url: webhookUrl,
-          status: headResponse.status,
-          connectivity: 'Failed',
-          error: `Webhook returned ${headResponse.status} on HEAD request`,
-          recommendation: 'Check if your n8n workflow is active and the webhook URL is correct'
-        });
-      }
-
-      // Test with minimal payload
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      const testResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry: "Test", selected_topics: ["test"] }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const responseText = await testResponse.text();
-
-      res.json({
-        webhook_url: webhookUrl,
-        status: testResponse.status,
-        connectivity: 'Connected',
-        response_preview: responseText.substring(0, 200),
-        ok: testResponse.ok,
-        message: testResponse.ok 
-          ? 'Webhook executed successfully' 
-          : `Workflow error: ${testResponse.status}`,
-        recommendation: testResponse.ok 
-          ? 'Webhook is working correctly'
-          : 'Check n8n workflow execution logs for errors'
-      });
-
-    } catch (error: any) {
-      console.log(`Webhook test error: ${error}`);
-      res.json({
-        error: true,
-        webhook_url: webhookUrl,
-        connectivity: 'Timeout',
-        message: error.name === 'AbortError' 
-          ? 'Webhook execution timeout - workflow may be stuck'
-          : `Connection error: ${error.message}`,
-        recommendation: 'Check n8n workflow for infinite loops, API timeouts, or authentication issues'
-      });
-    }
-  });
-
-  // API route to get content request history
-  app.get("/api/content-requests", async (req, res) => {
-    try {
-      // For now, get all requests (later can filter by user)
-      const requests = await storage.getContentRequestsByUserId(0); // Use 0 for anonymous requests
-      res.json(requests);
-    } catch (error: any) {
-      console.log(`Error fetching content requests: ${error}`);
-      res.status(500).json({ error: "Failed to fetch content requests" });
-    }
-  });
-
-  // API route to get specific content request
-  app.get("/api/content-requests/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const request = await storage.getContentRequest(id);
-      
-      if (!request) {
-        return res.status(404).json({ error: "Content request not found" });
-      }
-      
-      res.json(request);
-    } catch (error) {
-      console.log(`Error fetching content request: ${error}`);
-      res.status(500).json({ error: "Failed to fetch content request" });
-    }
-  });
-
   const httpServer = createServer(app);
-
   return httpServer;
 }
