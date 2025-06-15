@@ -17,13 +17,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create request record in database
       const contentRequest = await storage.createContentRequest({
-        userId: null, // Anonymous for now
+        userId: 0, // Anonymous for now
         industry,
         selectedTopics: selected_topics,
         status: "processing"
       });
 
-      // Proxy request to n8n webhook
+      // Proxy request to n8n webhook with timeout
+      console.log('Sending request to n8n webhook...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('n8n request timeout after 3 minutes');
+        controller.abort();
+      }, 180000); // 3 minutes timeout
+
       const n8nResponse = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
         method: 'POST',
         headers: {
@@ -32,8 +39,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           industry,
           selected_topics
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+      console.log('n8n response received with status:', n8nResponse.status);
 
       if (!n8nResponse.ok) {
         // Update request status to failed
@@ -63,9 +74,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return the response data
       res.json(responseData);
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Content generation error: ${error}`);
-      res.status(500).json({ error: "Internal server error", details: error.message });
+      res.status(500).json({ error: "Internal server error", details: error?.message });
     }
   });
 
@@ -73,9 +84,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/content-requests", async (req, res) => {
     try {
       // For now, get all requests (later can filter by user)
-      const requests = await storage.getContentRequestsByUserId(null);
+      const requests = await storage.getContentRequestsByUserId(0); // Use 0 for anonymous requests
       res.json(requests);
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error fetching content requests: ${error}`);
       res.status(500).json({ error: "Failed to fetch content requests" });
     }

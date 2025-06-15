@@ -108,19 +108,19 @@ export default function Home() {
     }
 
     try {
-      // Prepare request data for n8n webhook
+      // Prepare request data for our backend API
       const requestData = {
         industry: formData.industry.trim(),
         selected_topics: allTopics
       };
-      console.log('Sending request to n8n:', requestData);
+      console.log('Sending request to backend API:', requestData);
       
       // Set a timeout for the fetch request
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
       
       try {
-        const response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
+        const response = await fetch('/api/content-generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -131,12 +131,11 @@ export default function Home() {
 
         clearTimeout(timeoutId);
         console.log('Response received - status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Response error:', errorText);
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+          const errorData = await response.json();
+          console.error('Response error:', errorData);
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
         }
 
         const responseData = await response.json();

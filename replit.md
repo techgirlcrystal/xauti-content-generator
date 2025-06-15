@@ -96,9 +96,15 @@ This is a full-stack web application built for generating content based on user-
 - **Production**: Automatic migrations on deployment
 - **Connection**: Environment variable `DATABASE_URL` for database connectivity
 
-## Changelog
+## Recent Changes
 
-- June 15, 2025. Initial setup
+- June 15, 2025: Database integration completed
+  - Added PostgreSQL database with content request tracking
+  - Created backend API proxy to handle CORS issues with n8n webhook
+  - Database stores all content generation requests with status tracking
+  - Fixed direct webhook calls by routing through backend `/api/content-generate`
+
+- June 15, 2025: Initial setup with enhanced UI and n8n integration
 
 ## User Preferences
 
