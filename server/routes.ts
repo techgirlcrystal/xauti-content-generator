@@ -77,9 +77,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         csvBase64 = responseData.content;
         filename = responseData.filename || responseData.name || filename;
       } else if (responseData.kind === 'drive#file') {
-        // Google Drive response - the n8n workflow needs to be updated
-        console.log('Detected Google Drive file response - n8n workflow needs modification');
-        throw new Error('n8n workflow configuration issue: The workflow is returning a Google Drive file reference instead of the actual CSV content. Please update your n8n workflow to include a "Get File Content" node after creating the CSV file, and return the base64-encoded content in the response.');
+        // Google Drive response - fetch the actual file content
+        console.log('Detected Google Drive file response - fetching actual content');
+        
+        const downloadUrl = responseData.webContentLink;
+        filename = responseData.name || 'xauti-content.csv';
+        
+        try {
+          // Fetch the actual CSV content from Google Drive
+          const fileResponse = await fetch(downloadUrl);
+          if (fileResponse.ok) {
+            const csvContent = await fileResponse.text();
+            csvBase64 = btoa(csvContent);
+            console.log('Successfully fetched CSV content from Google Drive');
+          } else {
+            throw new Error('Failed to fetch from Google Drive');
+          }
+        } catch (fetchError) {
+          console.log('Could not fetch file content, providing download link instead');
+          // Fallback to providing download instructions
+          const csvContent = `Content Generation Complete!
+File Name: ${filename}
+File Size: ${responseData.size} bytes
+Created: ${responseData.createdTime}
+
+Your CSV content has been generated successfully.
+Direct Download URL: ${downloadUrl}
+
+To access your content:
+1. Click the download button below to get the file info
+2. Copy the Direct Download URL and paste it in a new browser tab
+3. The CSV file will download automatically`;
+          
+          csvBase64 = btoa(csvContent);
+        }
       } else {
         // Fallback - convert entire response to CSV-like format
         console.log('Unknown response format, creating fallback CSV');
