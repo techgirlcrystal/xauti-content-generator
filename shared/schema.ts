@@ -1,12 +1,14 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  contentStreak: integer("content_streak").default(0),
+  lastContentDate: date("last_content_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -34,9 +36,11 @@ export const contentRequestsRelations = relations(contentRequests, ({ one }) => 
   }),
 }));
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  contentStreak: true,
+  lastContentDate: true,
+  createdAt: true,
 });
 
 export const insertContentRequestSchema = createInsertSchema(contentRequests).pick({
