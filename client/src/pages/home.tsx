@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Edit, AlertCircle, CheckCircle, Info, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Edit, AlertCircle, Info } from "lucide-react";
 
 interface FormData {
   industry: string;
@@ -33,37 +32,13 @@ const PREDEFINED_TOPICS = [
 ];
 
 export default function Home() {
-  const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [formData, setFormData] = useState<FormData>({
     industry: '',
     selectedTopics: [],
     customTopic: ''
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
-  const [statusMessage, setStatusMessage] = useState<{
-    message: string;
-    type: 'success' | 'error' | 'info';
-  } | null>(null);
-
-  // Progress simulation
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isLoading) {
-      setProgress(0);
-      interval = setInterval(() => {
-        setProgress(prev => {
-          const increment = Math.random() * 15;
-          const newProgress = prev + increment;
-          return newProgress > 95 ? 95 : newProgress;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isLoading]);
 
   const validateForm = (): ValidationError[] => {
     const errors: ValidationError[] = [];
@@ -98,8 +73,6 @@ export default function Home() {
     }
 
     setValidationErrors([]);
-    setStatusMessage(null);
-    setIsLoading(true);
 
     // Prepare topics array
     const allTopics = [...formData.selectedTopics];
@@ -107,104 +80,12 @@ export default function Home() {
       allTopics.push(formData.customTopic.trim());
     }
 
-    try {
-      // Prepare request data for our backend API
-      const requestData = {
-        industry: formData.industry.trim(),
-        selected_topics: allTopics
-      };
-      console.log('Sending request to backend API:', requestData);
-      
-      // Set a timeout for the fetch request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
-      
-      try {
-        const response = await fetch('/api/content-generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestData),
-          signal: controller.signal
-        });
+    // Store data in session storage for the generate page
+    sessionStorage.setItem('pendingIndustry', formData.industry.trim());
+    sessionStorage.setItem('pendingTopics', JSON.stringify(allTopics));
 
-        clearTimeout(timeoutId);
-        console.log('Response received - status:', response.status);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Response error:', errorData);
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const responseData = await response.json();
-        console.log('Response data received:', responseData);
-        
-        // Complete progress
-        setProgress(100);
-
-        // Download CSV
-        const link = document.createElement('a');
-        link.href = 'data:text/csv;base64,' + responseData.csvBase64;
-        link.download = responseData.filename || 'xauti-content.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setStatusMessage({
-          message: 'Content generated successfully! Your CSV file has been downloaded.',
-          type: 'success'
-        });
-
-        toast({
-          title: "Success!",
-          description: "Your content has been generated and downloaded.",
-        });
-
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        console.error('Fetch error:', fetchError);
-        
-        if (fetchError.name === 'AbortError') {
-          throw new Error('Request timed out after 3 minutes. Please check if your n8n workflow is active and running.');
-        } else {
-          throw fetchError;
-        }
-      }
-
-    } catch (error) {
-      console.error('Error generating content:', error);
-      setProgress(100);
-      
-      // Provide more specific error messages based on the error type
-      let errorMessage = 'Something went wrong while generating content. Please try again.';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('timeout') || error.message.includes('AbortError')) {
-          errorMessage = 'The content generation is taking longer than expected. Please check if your n8n workflow is active and try again.';
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
-        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
-          errorMessage = 'Server error in n8n workflow. Please check your workflow configuration.';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Webhook endpoint not found. Please verify your n8n webhook URL is correct.';
-        }
-      }
-
-      setStatusMessage({
-        message: errorMessage,
-        type: 'error'
-      });
-
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Navigate to generate page
+    setLocation('/generate');
   };
 
   const handleReset = () => {
@@ -214,8 +95,6 @@ export default function Home() {
       customTopic: ''
     });
     setValidationErrors([]);
-    setStatusMessage(null);
-    setProgress(0);
   };
 
   const handleFieldBlur = () => {
@@ -338,17 +217,9 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button
                   type="submit"
-                  disabled={isLoading}
                   className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate Content'
-                  )}
+                  Generate Content
                 </Button>
                 
                 <Button
@@ -363,58 +234,6 @@ export default function Home() {
             </form>
           </CardContent>
         </Card>
-
-        {/* Loading State */}
-        {isLoading && (
-          <Card className="mt-6 shadow-sm border-gray-200">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="flex-shrink-0">
-                  <Loader2 className="h-8 w-8 animate-spin text-[hsl(24,95%,53%)]" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Generating your content...</h3>
-                  <p className="text-sm text-gray-600">
-                    Please allow 2-5 minutes for the workflow to complete. Do not close this page.
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    If this fails, check the browser console (F12) for detailed error logs to troubleshoot your n8n webhook.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                  <span>Processing content</span>
-                  <span>{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} className="w-full" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Status Messages */}
-        {statusMessage && (
-          <div className="mt-6">
-            <Alert className={`${
-              statusMessage.type === 'success' 
-                ? 'bg-green-50 border-green-200 text-green-800' 
-                : statusMessage.type === 'error'
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-blue-50 border-blue-200 text-blue-800'
-            }`}>
-              <div className="flex items-center space-x-3">
-                {statusMessage.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
-                {statusMessage.type === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-                {statusMessage.type === 'info' && <Info className="w-5 h-5 flex-shrink-0" />}
-                <AlertDescription className="font-medium">
-                  {statusMessage.message}
-                </AlertDescription>
-              </div>
-            </Alert>
-          </div>
-        )}
 
         {/* Info Panel */}
         <Card className="mt-8 bg-blue-50 border-blue-200">
