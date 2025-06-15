@@ -98,6 +98,17 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 15, 2025: Epic Script Generator with Brand Tone Customization
+  - Built comprehensive tone analysis system using OpenAI
+  - Added option to use default warm/encouraging brand tone or custom user tone
+  - Implemented automatic brand tone analysis from user writing examples
+  - Created manual brand tone description option for advanced users
+  - Added custom call-to-action integration for each script
+  - Enhanced daily script generation with 7 unique content themes (motivation, tips, stories, insights, encouragement, reflection, vision)
+  - Optimized scripts for Eleven Labs text-to-speech (30 seconds each)
+  - Database integration for storing tone preferences and call-to-actions
+  - Created comprehensive UI for tone setup and customization
+
 - June 15, 2025: n8n Workflow Timeout Resolution and Google Drive Integration
   - Fixed server crashes caused by undefined variables in routes
   - Implemented polling-based system to handle long-running n8n workflows

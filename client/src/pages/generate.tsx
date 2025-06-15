@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle, AlertCircle, Download, ArrowLeft, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -385,6 +386,126 @@ export default function Generate() {
     }));
   };
 
+  const proceedToToneSetup = () => {
+    setGenerationState(prev => ({
+      ...prev,
+      status: 'tone-setup'
+    }));
+  };
+
+  const analyzeTone = async () => {
+    if (!toneSetup.writingExamples) {
+      toast({
+        title: "Examples Required",
+        description: "Please provide writing examples to analyze your brand tone.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setToneSetup(prev => ({ ...prev, isAnalyzingTone: true }));
+
+    try {
+      const response = await fetch('/api/analyze-tone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          examples: toneSetup.writingExamples
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze tone');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.brandTone) {
+        setToneSetup(prev => ({
+          ...prev,
+          customTone: result.brandTone,
+          useDefaultTone: false,
+          isAnalyzingTone: false
+        }));
+        
+        toast({
+          title: "Tone Analyzed!",
+          description: "Your brand tone has been analyzed from your examples.",
+        });
+      } else {
+        throw new Error('Analysis failed');
+      }
+    } catch (error) {
+      console.error('Tone analysis error:', error);
+      setToneSetup(prev => ({ ...prev, isAnalyzingTone: false }));
+      
+      toast({
+        title: "Analysis Failed",
+        description: "Could not analyze your brand tone. You can still proceed with manual setup.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateScriptsWithTone = async () => {
+    if (!generationState.requestId) return;
+    
+    try {
+      setGenerationState(prev => ({
+        ...prev,
+        status: 'generating-scripts'
+      }));
+      
+      const response = await fetch('/api/generate-scripts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requestId: generationState.requestId,
+          brandTone: toneSetup.useDefaultTone ? null : toneSetup.customTone,
+          callToAction: toneSetup.callToAction,
+          useDefaultTone: toneSetup.useDefaultTone
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate scripts');
+      }
+
+      const scriptResponse = await response.json();
+      
+      if (scriptResponse.success && scriptResponse.scriptData) {
+        setGenerationState(prev => ({
+          ...prev,
+          status: 'completed',
+          scriptData: scriptResponse.scriptData
+        }));
+        
+        toast({
+          title: "Custom Scripts Generated!",
+          description: "Your personalized 30-day script collection is ready with your brand tone.",
+        });
+      } else {
+        throw new Error('Script generation failed');
+      }
+    } catch (error) {
+      console.error('Script generation error:', error);
+      setGenerationState(prev => ({
+        ...prev,
+        status: 'completed'
+      }));
+      
+      toast({
+        title: "Script Generation Failed",
+        description: "Your content is still available for download.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -515,7 +636,7 @@ export default function Generate() {
                 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    onClick={generateScripts}
+                    onClick={proceedToToneSetup}
                     className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
                   >
                     Yes, Generate Scripts
@@ -526,6 +647,190 @@ export default function Generate() {
                     className="border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
                     No Thanks, Just Download Content
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tone Setup Card */}
+        {generationState.status === 'tone-setup' && (
+          <Card className="shadow-sm border-purple-200 bg-purple-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-8 w-8 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-purple-900">Customize Your Script Tone</h3>
+                  <p className="text-sm text-purple-700">
+                    Choose your brand voice and add a call-to-action for your text-to-speech scripts.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Tone Selection */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Brand Tone Options</h4>
+                  
+                  <div className="grid gap-4">
+                    {/* Default Tone Option */}
+                    <div 
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                        toneSetup.useDefaultTone 
+                          ? 'border-purple-500 bg-purple-50' 
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                      onClick={() => setToneSetup(prev => ({ 
+                        ...prev, 
+                        useDefaultTone: true,
+                        customTone: "" 
+                      }))}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className={`w-4 h-4 rounded-full border-2 mt-0.5 ${
+                          toneSetup.useDefaultTone 
+                            ? 'border-purple-500 bg-purple-500' 
+                            : 'border-gray-300'
+                        }`}>
+                          {toneSetup.useDefaultTone && (
+                            <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">Use My Brand Tone (Recommended)</h5>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Warm, encouraging, and empowering. I speak with authentic care and genuine heart for helping others succeed. 
+                            My voice is supportive yet confident, using "you" to connect directly with my audience.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom Tone Option */}
+                    <div 
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                        !toneSetup.useDefaultTone 
+                          ? 'border-purple-500 bg-purple-50' 
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                      onClick={() => setToneSetup(prev => ({ 
+                        ...prev, 
+                        useDefaultTone: false 
+                      }))}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className={`w-4 h-4 rounded-full border-2 mt-0.5 ${
+                          !toneSetup.useDefaultTone 
+                            ? 'border-purple-500 bg-purple-500' 
+                            : 'border-gray-300'
+                        }`}>
+                          {!toneSetup.useDefaultTone && (
+                            <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">Use My Custom Brand Tone</h5>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Upload examples of your writing or define your brand tone manually for personalized scripts.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custom Tone Setup */}
+                {!toneSetup.useDefaultTone && (
+                  <div className="space-y-4 p-4 bg-white rounded-lg border border-purple-200">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Option 1: Upload Writing Examples (Recommended)
+                        </label>
+                        <Textarea
+                          placeholder="Paste 2-3 examples of your writing (social media posts, emails, blog content, etc.) so I can analyze your brand tone..."
+                          value={toneSetup.writingExamples}
+                          onChange={(e) => setToneSetup(prev => ({ 
+                            ...prev, 
+                            writingExamples: e.target.value 
+                          }))}
+                          className="min-h-[120px]"
+                        />
+                        <div className="flex justify-end mt-2">
+                          <Button
+                            onClick={analyzeTone}
+                            disabled={toneSetup.isAnalyzingTone || !toneSetup.writingExamples}
+                            className="bg-purple-600 hover:bg-purple-700"
+                          >
+                            {toneSetup.isAnalyzingTone ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              'Analyze My Tone'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="text-center text-gray-500">OR</div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Option 2: Describe Your Brand Tone Manually
+                        </label>
+                        <Textarea
+                          placeholder="Describe your brand tone (e.g., 'Professional yet approachable, using industry expertise to guide entrepreneurs with confidence and clarity...')"
+                          value={toneSetup.customTone}
+                          onChange={(e) => setToneSetup(prev => ({ 
+                            ...prev, 
+                            customTone: e.target.value 
+                          }))}
+                          className="min-h-[80px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Call-to-Action Setup */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Call-to-Action (Optional)
+                  </label>
+                  <Textarea
+                    placeholder="Add a custom call-to-action for your scripts (e.g., 'Visit my website', 'Subscribe for more tips', 'Book a consultation')..."
+                    value={toneSetup.callToAction}
+                    onChange={(e) => setToneSetup(prev => ({ 
+                      ...prev, 
+                      callToAction: e.target.value 
+                    }))}
+                    className="min-h-[60px]"
+                  />
+                  <p className="text-xs text-gray-500">
+                    This will be included at the end of each script for consistent branding.
+                  </p>
+                </div>
+
+                {/* Generate Button */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                  <Button
+                    onClick={generateScriptsWithTone}
+                    disabled={!toneSetup.useDefaultTone && !toneSetup.customTone}
+                    className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
+                  >
+                    Generate My Custom Scripts
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={skipScripts}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Skip Scripts
                   </Button>
                 </div>
               </div>
