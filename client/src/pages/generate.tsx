@@ -8,7 +8,7 @@ import { Loader2, CheckCircle, AlertCircle, Download, ArrowLeft, Clock } from "l
 import { useToast } from "@/hooks/use-toast";
 
 interface GenerationState {
-  status: 'generating' | 'completed' | 'failed' | 'scripts-prompt' | 'generating-scripts';
+  status: 'generating' | 'completed' | 'failed' | 'scripts-prompt' | 'tone-setup' | 'generating-scripts';
   progress: number;
   csvData?: {
     csvBase64: string;
@@ -20,6 +20,14 @@ interface GenerationState {
   };
   requestId?: number;
   error?: string;
+}
+
+interface ToneSetupData {
+  useDefaultTone: boolean;
+  customTone?: string;
+  writingExamples?: string;
+  callToAction?: string;
+  isAnalyzingTone?: boolean;
 }
 
 interface User {
@@ -37,6 +45,13 @@ export default function Generate() {
   const [generationState, setGenerationState] = useState<GenerationState>({
     status: 'generating',
     progress: 0
+  });
+  const [toneSetup, setToneSetup] = useState<ToneSetupData>({
+    useDefaultTone: true,
+    customTone: "",
+    writingExamples: "",
+    callToAction: "",
+    isAnalyzingTone: false
   });
 
   // Get passed data from URL params (more reliable than wouter state)

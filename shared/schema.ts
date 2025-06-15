@@ -21,6 +21,8 @@ export const contentRequests = pgTable("content_requests", {
   csvFilename: text("csv_filename"),
   csvBase64: text("csv_base64"),
   scriptContent: text("script_content"), // 30-second script for text-to-speech
+  brandTone: text("brand_tone"), // User's brand tone/voice
+  callToAction: text("call_to_action"), // Custom call-to-action
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),

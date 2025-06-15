@@ -8,6 +8,37 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Default brand tone (yours)
+const DEFAULT_BRAND_TONE = `Warm, encouraging, and empowering. I speak with authentic care and genuine heart for helping others succeed. My voice is supportive yet confident, using "you" to connect directly with my audience. I balance inspiration with practical action steps, always believing in people's potential while providing clear guidance. I use inclusive language that makes everyone feel welcomed and valued.`;
+
+// Analyze brand tone from user examples
+async function analyzeBrandTone(examples: string): Promise<string> {
+  try {
+    const prompt = `Analyze the brand tone and voice from these writing examples. Describe the tone, style, personality, and communication approach in 2-3 sentences that can be used to replicate this voice:
+
+Examples:
+${examples}
+
+Provide a clear description of the brand tone that captures:
+- Communication style (formal/casual, warm/professional, etc.)
+- Personality traits
+- How they connect with their audience
+- Key characteristics of their voice`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 150,
+      temperature: 0.3,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || DEFAULT_BRAND_TONE;
+  } catch (error) {
+    console.error("Error analyzing brand tone:", error);
+    return DEFAULT_BRAND_TONE;
+  }
+}
+
 // Generate a 30-second script for text-to-speech
 async function generateScript(industry: string, topics: string[]): Promise<string> {
   try {
@@ -38,48 +69,51 @@ async function generateScript(industry: string, topics: string[]): Promise<strin
   }
 }
 
-// Generate a daily script for text-to-speech
-async function generateDailyScript(industry: string, topics: string[], day: number): Promise<string> {
+// Generate a daily script for text-to-speech with custom tone and CTA
+async function generateDailyScript(industry: string, topics: string[], day: number, brandTone: string = DEFAULT_BRAND_TONE, callToAction: string = ""): Promise<string> {
   try {
     // Create varied prompts based on the day to ensure unique content
     const topicIndex = (day - 1) % topics.length;
     const currentTopic = topics[topicIndex] || topics[0];
     
-    const weekNumber = Math.ceil(day / 7);
-    const dayOfWeek = ((day - 1) % 7) + 1;
-    
     let prompt = "";
     
     // Create different types of content based on day patterns
     if (day % 7 === 1) { // Mondays - Motivation
-      prompt = `Create a motivational 30-second script for Day ${day} about ${industry}. Focus on ${currentTopic}. Start the week strong with inspiration and energy. Be uplifting and action-oriented. About 75-80 words for text-to-speech.`;
+      prompt = `Create a motivational 30-second script for Day ${day} about ${industry}. Focus on ${currentTopic}. Start the week strong with inspiration and energy. Be uplifting and action-oriented.`;
     } else if (day % 7 === 2) { // Tuesdays - Tips
-      prompt = `Create a practical tip script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share actionable advice that listeners can implement today. Be specific and helpful. About 75-80 words for text-to-speech.`;
+      prompt = `Create a practical tip script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share actionable advice that listeners can implement today. Be specific and helpful.`;
     } else if (day % 7 === 3) { // Wednesdays - Stories
-      prompt = `Create a story-based script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share a relatable scenario or example. Make it personal and engaging. About 75-80 words for text-to-speech.`;
+      prompt = `Create a story-based script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share a relatable scenario or example. Make it personal and engaging.`;
     } else if (day % 7 === 4) { // Thursdays - Insights
-      prompt = `Create an insightful script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share a deeper perspective or revelation. Be thoughtful and meaningful. About 75-80 words for text-to-speech.`;
+      prompt = `Create an insightful script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share a deeper perspective or revelation. Be thoughtful and meaningful.`;
     } else if (day % 7 === 5) { // Fridays - Encouragement
-      prompt = `Create an encouraging script for Day ${day} about ${industry}. Focus on ${currentTopic}. Help listeners feel confident and supported. End the week on a positive note. About 75-80 words for text-to-speech.`;
+      prompt = `Create an encouraging script for Day ${day} about ${industry}. Focus on ${currentTopic}. Help listeners feel confident and supported. End the week on a positive note.`;
     } else if (day % 7 === 6) { // Saturdays - Reflection
-      prompt = `Create a reflective script for Day ${day} about ${industry}. Focus on ${currentTopic}. Encourage thoughtful consideration and self-assessment. Be gentle and introspective. About 75-80 words for text-to-speech.`;
+      prompt = `Create a reflective script for Day ${day} about ${industry}. Focus on ${currentTopic}. Encourage thoughtful consideration and self-assessment. Be gentle and introspective.`;
     } else { // Sundays - Vision
-      prompt = `Create a visionary script for Day ${day} about ${industry}. Focus on ${currentTopic}. Paint a picture of the future and possibilities. Be hopeful and forward-looking. About 75-80 words for text-to-speech.`;
+      prompt = `Create a visionary script for Day ${day} about ${industry}. Focus on ${currentTopic}. Paint a picture of the future and possibilities. Be hopeful and forward-looking.`;
     }
     
-    prompt += ` 
+    prompt += `
 
-    IMPORTANT: 
+    BRAND TONE: Write in this specific voice and style: ${brandTone}
+    
+    ${callToAction ? `CALL TO ACTION: End with this specific call to action: ${callToAction}` : ''}
+    
+    REQUIREMENTS:
+    - About 75-80 words for 30-second text-to-speech
     - Create completely unique content (no repetitive phrases or openings)
     - Make it sound natural when read by Eleven Labs AI voice
+    - Match the brand tone exactly
     - Vary sentence structure and vocabulary
     - Return only the script text, no formatting or day numbers`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 120,
-      temperature: 0.9, // Higher temperature for more creativity
+      max_tokens: 130,
+      temperature: 0.9,
     });
 
     return response.choices[0]?.message?.content?.trim() || `Today's focus in ${industry}: Build meaningful connections with your audience. Share your authentic story and valuable insights. Consistency beats perfection. Keep moving forward!`;
@@ -432,10 +466,33 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
-  // Generate daily scripts for text-to-speech
+  // Analyze brand tone from user examples
+  app.post("/api/analyze-tone", async (req, res) => {
+    try {
+      const { examples } = req.body;
+      
+      if (!examples) {
+        return res.status(400).json({ error: "Writing examples are required" });
+      }
+      
+      console.log("Analyzing brand tone from user examples...");
+      const analyzedTone = await analyzeBrandTone(examples);
+      
+      res.json({
+        success: true,
+        brandTone: analyzedTone
+      });
+      
+    } catch (error) {
+      console.error("Error analyzing tone:", error);
+      res.status(500).json({ error: "Failed to analyze brand tone" });
+    }
+  });
+
+  // Generate daily scripts for text-to-speech with custom tone and CTA
   app.post("/api/generate-scripts", async (req, res) => {
     try {
-      const { requestId } = req.body;
+      const { requestId, brandTone, callToAction, useDefaultTone } = req.body;
       
       if (!requestId) {
         return res.status(400).json({ error: "Request ID is required" });
@@ -446,18 +503,21 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
         return res.status(404).json({ error: "Content request not found" });
       }
       
-      console.log("Generating 30-day script collection...");
+      const finalBrandTone = useDefaultTone ? DEFAULT_BRAND_TONE : (brandTone || DEFAULT_BRAND_TONE);
+      const finalCallToAction = callToAction || "";
+      
+      console.log("Generating 30-day script collection with custom tone...");
       
       const industry = contentRequest.industry;
       const topics = Array.isArray(contentRequest.selectedTopics) 
         ? contentRequest.selectedTopics 
         : [];
       
-      // Generate 30 daily scripts
+      // Generate 30 daily scripts with custom tone
       const scripts = [];
       for (let day = 1; day <= 30; day++) {
         try {
-          const dailyScript = await generateDailyScript(industry, topics, day);
+          const dailyScript = await generateDailyScript(industry, topics, day, finalBrandTone, finalCallToAction);
           scripts.push({
             day,
             script: dailyScript
@@ -478,9 +538,11 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       
       const scriptBase64 = Buffer.from(csvContent, 'utf-8').toString('base64');
       
-      // Update the content request with script data
+      // Update the content request with script data and tone preferences
       await storage.updateContentRequest(requestId, {
-        scriptContent: scriptBase64
+        scriptContent: scriptBase64,
+        brandTone: finalBrandTone,
+        callToAction: finalCallToAction
       });
       
       res.json({
