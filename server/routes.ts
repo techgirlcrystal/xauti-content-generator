@@ -4,29 +4,98 @@ import { storage } from "./storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // API route to handle content generation requests (proxy to n8n)
-  app.post("/api/content-generate", async (req, res) => {
+  // Authentication routes
+  app.post("/api/auth/signin", async (req, res) => {
     try {
-      const { industry, selected_topics, content_type = 'ai-pics' } = req.body;
+      const { name, email } = req.body;
       
-      if (!industry || !selected_topics) {
-        return res.status(400).json({ error: "Industry and selected topics are required" });
+      if (!name || !email) {
+        return res.status(400).json({ error: "Name and email are required" });
       }
 
-      console.log(`Content generation requested for industry: ${industry}, content type: ${content_type}`);
+      // Check if user exists
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Create new user
+        user = await storage.createUser({ name, email });
+      }
+
+      // Calculate streak
+      const today = new Date().toISOString().split('T')[0];
+      const lastDate = user.lastContentDate;
+      let newStreak = user.contentStreak || 0;
+
+      if (lastDate) {
+        const lastDateTime = new Date(lastDate);
+        const todayTime = new Date(today);
+        const diffDays = Math.floor((todayTime.getTime() - lastDateTime.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          // Consecutive day - increment streak
+          newStreak += 1;
+        } else if (diffDays > 1) {
+          // Gap in days - reset streak
+          newStreak = 1;
+        }
+        // If diffDays === 0, same day - keep current streak
+      } else {
+        // First time - start streak
+        newStreak = 1;
+      }
+
+      // Update user streak
+      user = await storage.updateUserStreak(user.id, newStreak, today);
+
+      res.json({ 
+        user,
+        message: `Welcome back! You're on day ${newStreak} of your content streak.`
+      });
+
+    } catch (error: any) {
+      console.log('Sign-in error:', error);
+      res.status(500).json({ error: "Failed to sign in" });
+    }
+  });
+
+  // Get current user info
+  app.get("/api/auth/user/:email", async (req, res) => {
+    try {
+      const { email } = req.params;
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ user });
+    } catch (error: any) {
+      console.log('Get user error:', error);
+      res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
+  // API route to handle content generation requests (30-day workflow only)
+  app.post("/api/content-generate", async (req, res) => {
+    try {
+      const { industry, selected_topics, userId } = req.body;
+      
+      if (!industry || !selected_topics || !userId) {
+        return res.status(400).json({ error: "Industry, selected topics, and user ID are required" });
+      }
+
+      console.log(`Content generation requested for industry: ${industry}, user: ${userId}`);
       
       // Create request record in database
       const contentRequest = await storage.createContentRequest({
-        userId: 0, // Anonymous for now
+        userId,
         industry,
         selectedTopics: selected_topics,
         status: "processing"
       });
 
-      // Determine webhook URL based on content type
-      const webhookUrl = content_type === 'content-only' 
-        ? 'https://n8n.srv847085.hstgr.cloud/webhook/words-only'
-        : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request';
+      // Use 30-day content workflow only
+      const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
 
       // Proxy request to n8n webhook with timeout
       console.log(`Sending request to n8n webhook: ${webhookUrl}`);
