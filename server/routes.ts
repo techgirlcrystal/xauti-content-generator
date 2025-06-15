@@ -32,9 +32,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Sending request to n8n webhook: ${webhookUrl}`);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('n8n request timeout after 30 seconds');
+        console.log('n8n request timeout after 2 minutes');
         controller.abort();
-      }, 30000); // 30 seconds timeout for initial connection
+      }, 120000); // 2 minutes timeout for content generation
 
       const n8nResponse = await fetch(webhookUrl, {
         method: 'POST',
@@ -166,11 +166,33 @@ Both need the same Google Drive download fix for direct CSV downloads.`;
 
     } catch (error: any) {
       console.log(`Content generation error: ${error}`);
-      res.status(500).json({ error: "Internal server error", details: error?.message });
+      
+      // Update request status to failed if we have a request record
+      try {
+        if (contentRequest?.id) {
+          await storage.updateContentRequest(contentRequest.id, {
+            status: "failed",
+            errorMessage: `Workflow timeout or error: ${error?.message}`,
+            completedAt: new Date()
+          });
+        }
+      } catch (updateError) {
+        console.log('Failed to update request status:', updateError);
+      }
+      
+      // Provide helpful error message based on error type
+      if (error.name === 'AbortError') {
+        res.status(500).json({ 
+          error: "Workflow timeout", 
+          details: `The ${content_type || 'selected'} workflow is taking longer than expected. Please check your n8n workflow for errors or contact support.`
+        });
+      } else {
+        res.status(500).json({ error: "Internal server error", details: error?.message });
+      }
     }
   });
 
-  // Test webhook connectivity endpoint
+  // Test webhook connectivity endpoint with detailed diagnostics
   app.post("/api/test-webhook", async (req, res) => {
     try {
       const { webhook_type = 'ai-pics' } = req.body;
@@ -181,41 +203,57 @@ Both need the same Google Drive download fix for direct CSV downloads.`;
 
       console.log(`Testing webhook: ${webhookUrl}`);
 
+      // First test basic connectivity
+      const headResponse = await fetch(webhookUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+      
+      if (!headResponse.ok) {
+        return res.json({
+          webhook_url: webhookUrl,
+          status: headResponse.status,
+          connectivity: 'Failed',
+          error: `Webhook returned ${headResponse.status} on HEAD request`,
+          recommendation: 'Check if your n8n workflow is active and the webhook URL is correct'
+        });
+      }
+
+      // Test with minimal payload
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, 10000); // 10 second timeout for testing
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const testResponse = await fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          industry: "Test",
-          selected_topics: ["test"]
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry: "Test", selected_topics: ["test"] }),
         signal: controller.signal
       });
 
       clearTimeout(timeoutId);
+      const responseText = await testResponse.text();
 
       res.json({
         webhook_url: webhookUrl,
         status: testResponse.status,
+        connectivity: 'Connected',
+        response_preview: responseText.substring(0, 200),
         ok: testResponse.ok,
         message: testResponse.ok 
-          ? `Webhook is active and responding` 
-          : `Webhook returned ${testResponse.status} error`
+          ? 'Webhook executed successfully' 
+          : `Workflow error: ${testResponse.status}`,
+        recommendation: testResponse.ok 
+          ? 'Webhook is working correctly'
+          : 'Check n8n workflow execution logs for errors'
       });
 
     } catch (error: any) {
       console.log(`Webhook test error: ${error}`);
       res.json({
         error: true,
+        webhook_url: webhookUrl,
+        connectivity: 'Timeout',
         message: error.name === 'AbortError' 
-          ? 'Webhook timeout - may not be active'
-          : `Connection error: ${error.message}`
+          ? 'Webhook execution timeout - workflow may be stuck'
+          : `Connection error: ${error.message}`,
+        recommendation: 'Check n8n workflow for infinite loops, API timeouts, or authentication issues'
       });
     }
   });
