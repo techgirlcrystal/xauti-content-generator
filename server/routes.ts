@@ -182,7 +182,7 @@ If the download doesn't work automatically:
 File ID: ${responseData.id}
 Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
             
-            csvBase64 = btoa(instructionsContent);
+            csvBase64 = Buffer.from(instructionsContent, 'utf-8').toString('base64');
             
             // Store the download instructions and URL in the CSV content
             await storage.updateContentRequest(contentRequest.id, {
