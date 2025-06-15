@@ -177,14 +177,30 @@ export default function Home() {
     } catch (error) {
       console.error('Error generating content:', error);
       setProgress(100);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = 'Something went wrong while generating content. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('AbortError')) {
+          errorMessage = 'The content generation is taking longer than expected. Please check if your n8n workflow is active and try again.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+          errorMessage = 'Server error in n8n workflow. Please check your workflow configuration.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Webhook endpoint not found. Please verify your n8n webhook URL is correct.';
+        }
+      }
+
       setStatusMessage({
-        message: 'Something went wrong while generating content. Please try again.',
+        message: errorMessage,
         type: 'error'
       });
 
       toast({
         title: "Error",
-        description: "Failed to generate content. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -362,6 +378,9 @@ export default function Home() {
                   <p className="text-sm text-gray-600">
                     Please allow 2-5 minutes for the workflow to complete. Do not close this page.
                   </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    If this fails, check the browser console (F12) for detailed error logs to troubleshoot your n8n webhook.
+                  </p>
                 </div>
               </div>
               
@@ -410,6 +429,26 @@ export default function Home() {
                   <p>• Our AI generates 5 days of tailored content</p>
                   <p>• Download your content as a CSV file</p>
                   <p>• Use the content across your marketing channels</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Troubleshooting Panel */}
+        <Card className="mt-6 bg-yellow-50 border-yellow-200">
+          <CardContent className="p-6">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-medium text-yellow-900">n8n Webhook Troubleshooting</h3>
+                <div className="mt-2 text-sm text-yellow-700 space-y-1">
+                  <p><strong>If the webhook isn't triggering:</strong></p>
+                  <p>• Ensure your n8n workflow is <strong>active/published</strong></p>
+                  <p>• Check that the webhook node is set to accept <strong>POST</strong> requests</p>
+                  <p>• Verify the webhook URL matches exactly: <code className="bg-yellow-200 px-1 rounded text-xs">dashboard-content-request</code></p>
+                  <p>• Test the webhook independently using the n8n test feature</p>
+                  <p>• Check browser console (F12) for detailed error logs</p>
                 </div>
               </div>
             </div>
