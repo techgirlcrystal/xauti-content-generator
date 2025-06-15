@@ -98,13 +98,15 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
-- June 15, 2025: Dual-workflow system implemented
-  - Added content type selection: "AI Pics" (5 days with images) vs "Content" (30 days, text-only)
-  - Integrated two n8n workflows with different webhook endpoints
-  - AI Pics workflow: `https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request`
-  - Content workflow: `https://n8n.srv847085.hstgr.cloud/webhook/words-only`
-  - Updated UI with visual selection cards and appropriate labels
-  - Dynamic progress messages based on selected content type
+- June 15, 2025: Complete 30-day content streak system implementation
+  - Removed AI Pics option - focused exclusively on 30-day content generation
+  - Implemented name/email sign-in system with automatic user creation
+  - Added content streak tracking showing "Day 1, Day 2, Day 3" progress
+  - Created clean landing page for authentication
+  - Updated home page with streak display and user info header
+  - Modified backend to use single content workflow endpoint
+  - Fixed all frontend errors and completed authentication flow
+  - Users can now track daily content generation progress
 
 - June 15, 2025: Database integration and CSV download resolution
   - Added PostgreSQL database with content request tracking
