@@ -290,6 +290,86 @@ export default function Generate() {
     generateContent();
   };
 
+  const downloadScripts = () => {
+    if (generationState.scriptData) {
+      const csvBlob = new Blob([atob(generationState.scriptData.csvBase64)], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(csvBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = generationState.scriptData.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Scripts Downloaded",
+        description: "Your 30-day script collection is ready for text-to-speech.",
+      });
+    }
+  };
+
+  const generateScripts = async () => {
+    if (!generationState.requestId) return;
+    
+    try {
+      setGenerationState(prev => ({
+        ...prev,
+        status: 'generating-scripts'
+      }));
+      
+      const response = await fetch('/api/generate-scripts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requestId: generationState.requestId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate scripts');
+      }
+
+      const scriptResponse = await response.json();
+      
+      if (scriptResponse.success && scriptResponse.scriptData) {
+        setGenerationState(prev => ({
+          ...prev,
+          status: 'completed',
+          scriptData: scriptResponse.scriptData
+        }));
+        
+        toast({
+          title: "Scripts Generated!",
+          description: "Your 30-day script collection is ready for download.",
+        });
+      } else {
+        throw new Error('Script generation failed');
+      }
+    } catch (error) {
+      console.error('Script generation error:', error);
+      setGenerationState(prev => ({
+        ...prev,
+        status: 'completed'
+      }));
+      
+      toast({
+        title: "Script Generation Failed",
+        description: "Don't worry, your content is still available for download.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const skipScripts = () => {
+    setGenerationState(prev => ({
+      ...prev,
+      status: 'completed'
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -306,6 +386,8 @@ export default function Generate() {
                 <h1 className="text-2xl font-bold text-gray-900">Content Generation</h1>
                 <p className="text-sm text-gray-600">
                   {generationState.status === 'generating' && 'Generating your content...'}
+                  {generationState.status === 'scripts-prompt' && 'Content ready! Optional scripts available.'}
+                  {generationState.status === 'generating-scripts' && 'Generating your daily scripts...'}
                   {generationState.status === 'completed' && 'Content generated successfully!'}
                   {generationState.status === 'failed' && 'Generation failed'}
                 </p>
@@ -387,6 +469,79 @@ export default function Generate() {
           </Card>
         )}
 
+        {/* Scripts Prompt Card */}
+        {generationState.status === 'scripts-prompt' && (
+          <Card className="shadow-sm border-blue-200 bg-blue-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-blue-900">Content Ready!</h3>
+                  <p className="text-sm text-blue-700">
+                    Your 30 days of content is ready. Would you like daily scripts for text-to-speech?
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-gray-900 mb-2">Optional: Generate Daily Scripts</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Get 30 custom scripts (one for each day) that you can easily copy and paste into any text-to-speech generator. Each script is designed to be exactly 30 seconds when read aloud.
+                  </p>
+                  <div className="text-xs text-gray-500">
+                    • Perfect for creating daily audio content
+                    • Ready to use with any text-to-speech tool
+                    • Organized by day in a CSV file for easy access
+                  </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={generateScripts}
+                    className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
+                  >
+                    Yes, Generate Scripts
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={skipScripts}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    No Thanks, Just Download Content
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Generating Scripts Card */}
+        {generationState.status === 'generating-scripts' && (
+          <Card className="shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="flex-shrink-0">
+                  <Loader2 className="h-8 w-8 text-[hsl(24,95%,53%)] animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Generating Daily Scripts</h3>
+                  <p className="text-sm text-gray-600">
+                    Creating 30 personalized scripts for text-to-speech generators...
+                  </p>
+                </div>
+              </div>
+              
+              <Progress value={75} className="h-2" />
+              <p className="text-xs text-gray-500 mt-2">
+                This may take a few minutes as we create custom scripts for each day
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Success Card */}
         {generationState.status === 'completed' && (
           <Card className="shadow-sm border-green-200 bg-green-50">
@@ -430,6 +585,17 @@ export default function Generate() {
                   <Download className="w-4 h-4 mr-2" />
                   Download 30 Days of Content
                 </Button>
+                
+                {generationState.scriptData && (
+                  <Button
+                    onClick={downloadScripts}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Daily Scripts
+                  </Button>
+                )}
+                
                 <Button
                   variant="outline"
                   onClick={downloadCSV}
