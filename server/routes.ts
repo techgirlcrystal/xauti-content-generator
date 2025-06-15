@@ -25,16 +25,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Determine webhook URL based on content type
       const webhookUrl = content_type === 'content-only' 
-        ? 'https://n8n.srv847085.hstgr.cloud/webhook-test/words-only'
+        ? 'https://n8n.srv847085.hstgr.cloud/webhook/words-only'
         : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request';
 
       // Proxy request to n8n webhook with timeout
       console.log(`Sending request to n8n webhook: ${webhookUrl}`);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('n8n request timeout after 3 minutes');
+        console.log('n8n request timeout after 30 seconds');
         controller.abort();
-      }, 180000); // 3 minutes timeout
+      }, 30000); // 30 seconds timeout for initial connection
 
       const n8nResponse = await fetch(webhookUrl, {
         method: 'POST',
@@ -61,6 +61,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const errorText = await n8nResponse.text();
         console.log(`n8n webhook error: ${errorText}`);
+        
+        // Provide specific error message for webhook issues
+        if (n8nResponse.status === 404) {
+          const webhookName = content_type === 'content-only' ? 'words-only' : 'dashboard-content-request';
+          return res.status(500).json({ 
+            error: "Webhook not found", 
+            details: `The ${webhookName} webhook is not active. Please activate your n8n workflow by clicking 'Execute workflow' in n8n, then try again.`,
+            webhook_url: webhookUrl
+          });
+        }
+        
         return res.status(500).json({ error: "Content generation failed", details: errorText });
       }
 
@@ -150,6 +161,56 @@ This will provide direct CSV downloads without requiring Google Drive authentica
     } catch (error: any) {
       console.log(`Content generation error: ${error}`);
       res.status(500).json({ error: "Internal server error", details: error?.message });
+    }
+  });
+
+  // Test webhook connectivity endpoint
+  app.post("/api/test-webhook", async (req, res) => {
+    try {
+      const { webhook_type = 'ai-pics' } = req.body;
+      
+      const webhookUrl = webhook_type === 'content-only' 
+        ? 'https://n8n.srv847085.hstgr.cloud/webhook/words-only'
+        : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request';
+
+      console.log(`Testing webhook: ${webhookUrl}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, 10000); // 10 second timeout for testing
+
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          industry: "Test",
+          selected_topics: ["test"]
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      res.json({
+        webhook_url: webhookUrl,
+        status: testResponse.status,
+        ok: testResponse.ok,
+        message: testResponse.ok 
+          ? `Webhook is active and responding` 
+          : `Webhook returned ${testResponse.status} error`
+      });
+
+    } catch (error: any) {
+      console.log(`Webhook test error: ${error}`);
+      res.json({
+        error: true,
+        message: error.name === 'AbortError' 
+          ? 'Webhook timeout - may not be active'
+          : `Connection error: ${error.message}`
+      });
     }
   });
 
