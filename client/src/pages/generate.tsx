@@ -137,9 +137,13 @@ export default function Generate() {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       });
 
+      // Show more detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: "Failed to generate content. Please try again.",
+        description: errorMessage.includes('timeout') 
+          ? "The n8n workflow is not responding. Please check your workflow setup."
+          : "Failed to generate content. Please try again.",
         variant: "destructive",
       });
     }

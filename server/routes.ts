@@ -101,9 +101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Sending request to n8n webhook: ${webhookUrl}`);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('n8n request timeout after 2 minutes');
+        console.log('n8n request timeout after 30 seconds');
         controller.abort();
-      }, 120000); // 2 minutes timeout for content generation
+      }, 30000); // 30 seconds timeout for content generation
 
       const n8nResponse = await fetch(webhookUrl, {
         method: 'POST',
@@ -252,7 +252,13 @@ The workflow needs the same Google Drive download fix for direct CSV downloads.`
       if (error.name === 'AbortError') {
         res.status(500).json({ 
           error: "Workflow timeout", 
-          details: `The content generation workflow is taking longer than expected. Please check your n8n workflow for errors or contact support.`
+          details: `Your n8n workflow at ${webhookUrl} is not responding. Please check if your n8n workflow is active and properly configured.`,
+          troubleshooting: [
+            "1. Check if your n8n workflow is activated (not just saved)",
+            "2. Verify the webhook URL is correct",
+            "3. Test the webhook manually in n8n",
+            "4. Check for any errors in your n8n workflow execution logs"
+          ]
         });
       } else {
         res.status(500).json({ error: "Internal server error", details: error?.message });
