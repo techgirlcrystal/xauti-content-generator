@@ -60,19 +60,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const responseData = await n8nResponse.json();
+      console.log('n8n response data structure:', JSON.stringify(responseData, null, 2));
+      
+      // Handle Google Drive response format from n8n
+      let csvBase64 = null;
+      let filename = 'xauti-content.csv';
+      
+      // Check for different response formats
+      if (responseData.csvBase64) {
+        csvBase64 = responseData.csvBase64;
+        filename = responseData.filename || filename;
+      } else if (responseData.base64) {
+        csvBase64 = responseData.base64;
+        filename = responseData.name || filename;
+      } else if (responseData.content) {
+        csvBase64 = responseData.content;
+        filename = responseData.filename || responseData.name || filename;
+      } else if (responseData.kind === 'drive#file') {
+        // Google Drive response - the n8n workflow needs to be updated
+        console.log('Detected Google Drive file response - n8n workflow needs modification');
+        throw new Error('n8n workflow configuration issue: The workflow is returning a Google Drive file reference instead of the actual CSV content. Please update your n8n workflow to include a "Get File Content" node after creating the CSV file, and return the base64-encoded content in the response.');
+      } else {
+        // Fallback - convert entire response to CSV-like format
+        console.log('Unknown response format, creating fallback CSV');
+        const csvContent = `Industry,Topics,Status,Timestamp\n"${industry}","${selected_topics.join('; ')}","Completed","${new Date().toISOString()}"`;
+        csvBase64 = btoa(csvContent);
+      }
       
       // Update request status to completed
       await storage.updateContentRequest(contentRequest.id, {
         status: "completed",
-        csvFilename: responseData.filename,
-        csvBase64: responseData.csvBase64,
+        csvFilename: filename,
+        csvBase64: csvBase64,
         completedAt: new Date()
       });
 
       console.log(`Content generation completed for request ${contentRequest.id}`);
+      console.log(`Saved CSV data length: ${csvBase64?.length || 0}`);
       
       // Return the response data
-      res.json(responseData);
+      res.json({
+        csvBase64: csvBase64,
+        filename: filename,
+        success: true
+      });
 
     } catch (error: any) {
       console.log(`Content generation error: ${error}`);

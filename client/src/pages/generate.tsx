@@ -119,17 +119,53 @@ export default function Generate() {
   const downloadCSV = () => {
     if (!generationState.csvData) return;
 
-    const link = document.createElement('a');
-    link.href = 'data:text/csv;base64,' + generationState.csvData.csvBase64;
-    link.download = generationState.csvData.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const csvData = generationState.csvData.csvBase64;
+      const filename = generationState.csvData.filename;
+      
+      console.log('Attempting to download CSV:', { filename, hasData: !!csvData });
+      
+      if (!csvData) {
+        console.error('No CSV data available for download');
+        toast({
+          title: "Download Error",
+          description: "No CSV data available for download.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    toast({
-      title: "Downloaded",
-      description: "CSV file has been downloaded to your device.",
-    });
+      // Create download link
+      const link = document.createElement('a');
+      
+      // Handle different data formats
+      if (csvData.startsWith('data:')) {
+        // Already formatted as data URL
+        link.href = csvData;
+      } else {
+        // Base64 data that needs formatting
+        link.href = `data:text/csv;base64,${csvData}`;
+      }
+      
+      link.download = filename || 'xauti-content.csv';
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Downloaded",
+        description: "CSV file has been downloaded to your device.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Error", 
+        description: "Failed to download CSV file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const goBack = () => {
