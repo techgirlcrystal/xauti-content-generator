@@ -38,6 +38,37 @@ async function generateScript(industry: string, topics: string[]): Promise<strin
   }
 }
 
+// Generate a daily script for text-to-speech
+async function generateDailyScript(industry: string, topics: string[], day: number): Promise<string> {
+  try {
+    const topicsText = topics.slice(0, 3).join(", "); // Use first 3 topics to keep prompt focused
+    
+    const prompt = `Create a 30-second script for Day ${day} of a "${industry}" content series. The script should:
+    
+    - Be exactly 30 seconds when read aloud (about 75-80 words)
+    - Sound natural for text-to-speech generators
+    - Focus on: ${topicsText}
+    - Be specific to day ${day} of a 30-day journey
+    - Include actionable advice
+    - End with encouragement
+    - Use conversational, friendly language
+    
+    Return only the script text, no day numbers or formatting.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 100,
+      temperature: 0.8, // Slightly higher temperature for variety
+    });
+
+    return response.choices[0]?.message?.content?.trim() || `Today's focus in ${industry}: Build meaningful connections with your audience. Share your authentic story and valuable insights. Consistency beats perfection. Keep moving forward!`;
+  } catch (error) {
+    console.error(`Error generating daily script for day ${day}:`, error);
+    return `Day ${day} in your ${industry} journey: Share your expertise with confidence. Every piece of content you create adds value to someone's life. Stay consistent and keep growing!`;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
@@ -378,6 +409,71 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
           ? 'Webhook test timeout'
           : `Test failed: ${error.message}`
       });
+    }
+  });
+
+  // Generate daily scripts for text-to-speech
+  app.post("/api/generate-scripts", async (req, res) => {
+    try {
+      const { requestId } = req.body;
+      
+      if (!requestId) {
+        return res.status(400).json({ error: "Request ID is required" });
+      }
+      
+      const contentRequest = await storage.getContentRequest(requestId);
+      if (!contentRequest) {
+        return res.status(404).json({ error: "Content request not found" });
+      }
+      
+      console.log("Generating 30-day script collection...");
+      
+      const industry = contentRequest.industry;
+      const topics = Array.isArray(contentRequest.selectedTopics) 
+        ? contentRequest.selectedTopics 
+        : [];
+      
+      // Generate 30 daily scripts
+      const scripts = [];
+      for (let day = 1; day <= 30; day++) {
+        try {
+          const dailyScript = await generateDailyScript(industry, topics, day);
+          scripts.push({
+            day,
+            script: dailyScript
+          });
+        } catch (error) {
+          console.error(`Error generating script for day ${day}:`, error);
+          scripts.push({
+            day,
+            script: `Day ${day}: Share your expertise in ${industry}. Connect with your audience through authentic storytelling and valuable insights. Your voice matters.`
+          });
+        }
+      }
+      
+      // Create CSV content with daily scripts
+      const csvHeader = "Day,Script\n";
+      const csvRows = scripts.map(s => `${s.day},"${s.script.replace(/"/g, '""')}"`).join('\n');
+      const csvContent = csvHeader + csvRows;
+      
+      const scriptBase64 = Buffer.from(csvContent, 'utf-8').toString('base64');
+      
+      // Update the content request with script data
+      await storage.updateContentRequest(requestId, {
+        scriptContent: scriptBase64
+      });
+      
+      res.json({
+        success: true,
+        scriptData: {
+          csvBase64: scriptBase64,
+          filename: `scripts_${industry.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error generating scripts:", error);
+      res.status(500).json({ error: "Failed to generate scripts" });
     }
   });
 

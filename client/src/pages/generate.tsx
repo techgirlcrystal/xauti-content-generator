@@ -8,12 +8,17 @@ import { Loader2, CheckCircle, AlertCircle, Download, ArrowLeft, Clock } from "l
 import { useToast } from "@/hooks/use-toast";
 
 interface GenerationState {
-  status: 'generating' | 'completed' | 'failed';
+  status: 'generating' | 'completed' | 'failed' | 'scripts-prompt' | 'generating-scripts';
   progress: number;
   csvData?: {
     csvBase64: string;
     filename: string;
   };
+  scriptData?: {
+    csvBase64: string;
+    filename: string;
+  };
+  requestId?: number;
   error?: string;
 }
 
@@ -162,9 +167,10 @@ export default function Generate() {
         
         if (statusData.status === 'completed' && statusData.csvData) {
           setGenerationState({
-            status: 'completed',
+            status: 'scripts-prompt',
             progress: 100,
-            csvData: statusData.csvData
+            csvData: statusData.csvData,
+            requestId: requestId
           });
           
           toast({
