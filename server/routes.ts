@@ -2,11 +2,20 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
+import Stripe from "stripe";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Initialize Stripe client (optional - for payment processing)
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-05-28.basil",
+  });
+}
 
 // Default brand tone (yours)
 const DEFAULT_BRAND_TONE = `Warm, encouraging, and empowering. I speak with authentic care and genuine heart for helping others succeed. My voice is supportive yet confident, using "you" to connect directly with my audience. I balance inspiration with practical action steps, always believing in people's potential while providing clear guidance. I use inclusive language that makes everyone feel welcomed and valued.`;
@@ -220,9 +229,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           basic: { limit: 2, name: "$3 Basic" },
           pro: { limit: 10, name: "$27 Pro" },
           unlimited: { limit: "unlimited", name: "$99+ Unlimited" }
-        };
+        } as const;
         
-        const currentTier = tierInfo[user?.subscriptionTier || 'free'];
+        const userTier = (user?.subscriptionTier || 'free') as keyof typeof tierInfo;
+        const currentTier = tierInfo[userTier];
         
         return res.status(403).json({
           success: false,
@@ -596,6 +606,188 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     } catch (error) {
       console.error("Error generating scripts:", error);
       res.status(500).json({ error: "Failed to generate scripts" });
+    }
+  });
+
+  // Subscription management routes
+  
+  // Update user subscription tier (for HighLevel integration or manual updates)
+  app.post("/api/subscription/update", async (req, res) => {
+    try {
+      const { userId, subscriptionTier, tags } = req.body;
+      
+      if (!userId || !subscriptionTier) {
+        return res.status(400).json({ error: "User ID and subscription tier are required" });
+      }
+
+      // Set generation limits based on tier
+      const tierLimits = {
+        free: 0,
+        basic: 2,
+        pro: 10,
+        unlimited: 999999 // Effectively unlimited
+      };
+
+      const generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
+
+      const updatedUser = await storage.updateUserSubscription(userId, {
+        subscriptionTier,
+        subscriptionStatus: "active",
+        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        tags: tags || [],
+        generationsLimit: generationsLimit
+      });
+
+      res.json({
+        success: true,
+        user: updatedUser,
+        message: `Subscription updated to ${subscriptionTier}`
+      });
+    } catch (error: any) {
+      console.error('Subscription update error:', error);
+      res.status(500).json({ error: "Failed to update subscription" });
+    }
+  });
+
+  // Purchase additional generations ($7 per generation)
+  app.post("/api/purchase/generations", async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: "Payment processing not configured" });
+    }
+
+    try {
+      const { userId, generationCount = 1 } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const amountPerGeneration = 700; // $7.00 in cents
+      const totalAmount = amountPerGeneration * generationCount;
+
+      // Create Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: totalAmount,
+        currency: "usd",
+        metadata: {
+          userId: userId.toString(),
+          generationCount: generationCount.toString(),
+          type: "generation_purchase"
+        },
+        description: `${generationCount} additional content generation${generationCount > 1 ? 's' : ''}`
+      });
+
+      res.json({
+        success: true,
+        clientSecret: paymentIntent.client_secret,
+        amount: totalAmount,
+        generationCount
+      });
+    } catch (error: any) {
+      console.error('Generation purchase error:', error);
+      res.status(500).json({ error: "Failed to create payment intent" });
+    }
+  });
+
+  // Handle successful payment and add generations
+  app.post("/api/purchase/confirm", async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: "Payment processing not configured" });
+    }
+
+    try {
+      const { paymentIntentId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ error: "Payment intent ID is required" });
+      }
+
+      // Retrieve payment intent from Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ error: "Payment not successful" });
+      }
+
+      const userId = parseInt(paymentIntent.metadata.userId);
+      const generationCount = parseInt(paymentIntent.metadata.generationCount);
+
+      // Record the purchase
+      await storage.createGenerationPurchase({
+        userId,
+        generationsAdded: generationCount,
+        amountPaid: paymentIntent.amount,
+        stripePaymentIntentId: paymentIntentId,
+        paymentStatus: "completed"
+      });
+
+      // Add generations to user's account
+      const updatedUser = await storage.addGenerationsToUser(userId, generationCount);
+
+      res.json({
+        success: true,
+        user: updatedUser,
+        generationsAdded: generationCount,
+        message: `Successfully added ${generationCount} generation${generationCount > 1 ? 's' : ''} to your account`
+      });
+    } catch (error: any) {
+      console.error('Payment confirmation error:', error);
+      res.status(500).json({ error: "Failed to confirm payment" });
+    }
+  });
+
+  // Get user subscription and usage info
+  app.get("/api/subscription/status/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(parseInt(userId));
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const tierInfo = {
+        free: { limit: 0, name: "Free", price: "$0" },
+        basic: { limit: 2, name: "Basic", price: "$3" },
+        pro: { limit: 10, name: "Pro", price: "$27" },
+        unlimited: { limit: "unlimited", name: "Unlimited", price: "$99+" }
+      } as const;
+
+      const userTier = (user.subscriptionTier || 'free') as keyof typeof tierInfo;
+      const currentTier = tierInfo[userTier];
+      const canGenerate = await storage.checkUserCanGenerate(parseInt(userId));
+
+      // Calculate total available generations
+      const tierLimit = userTier === 'unlimited' ? 999999 : currentTier.limit;
+      const totalLimit = tierLimit + (user.generationsLimit || 0);
+
+      res.json({
+        success: true,
+        subscription: {
+          tier: userTier,
+          tierName: currentTier.name,
+          tierPrice: currentTier.price,
+          status: user.subscriptionStatus || 'inactive',
+          endDate: user.subscriptionEndDate
+        },
+        usage: {
+          generationsUsed: user.generationsUsed || 0,
+          generationsLimit: user.generationsLimit || 0,
+          tierLimit: tierLimit,
+          totalLimit: totalLimit,
+          canGenerate: canGenerate,
+          remainingGenerations: Math.max(0, totalLimit - (user.generationsUsed || 0))
+        },
+        tags: user.tags || []
+      });
+    } catch (error: any) {
+      console.error('Subscription status error:', error);
+      res.status(500).json({ error: "Failed to get subscription status" });
     }
   });
 
