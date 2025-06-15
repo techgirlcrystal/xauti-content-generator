@@ -98,6 +98,16 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 15, 2025: Tier-Based Subscription System with Usage Limits
+  - Implemented comprehensive subscription management with 4 tiers: Free (0), $3 Basic (2), $27 Pro (10), $99+ Unlimited
+  - Added Stripe payment integration for $7 per additional generation purchases
+  - Created usage tracking and enforcement before content generation
+  - Built subscription management API endpoints for HighLevel integration
+  - Added tag-based user management for external system integration
+  - Implemented automatic generation count increment on successful completion
+  - Enhanced error handling with clear upgrade messaging for limit exceeded scenarios
+  - Database schema expansion with subscription tiers, usage tracking, and payment records
+
 - June 15, 2025: Epic Script Generator with Brand Tone Customization
   - Built comprehensive tone analysis system using OpenAI
   - Added option to use default warm/encouraging brand tone or custom user tone

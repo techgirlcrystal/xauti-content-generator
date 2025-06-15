@@ -129,6 +129,23 @@ export default function Generate() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle generation limit exceeded
+        if (errorData.error === 'GENERATION_LIMIT_EXCEEDED') {
+          setGenerationState({
+            status: 'failed',
+            progress: 0,
+            error: `Generation limit reached for ${errorData.tierName} plan. You've used ${errorData.generationsUsed} of ${errorData.tierLimit} generations.`
+          });
+          
+          toast({
+            title: "Generation Limit Reached",
+            description: `Upgrade your plan or purchase additional generations to continue.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
         throw new Error(errorData.error || 'Content generation failed');
       }
 

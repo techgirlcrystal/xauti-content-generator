@@ -12,9 +12,7 @@ const openai = new OpenAI({
 // Initialize Stripe client (optional - for payment processing)
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-05-28.basil",
-  });
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
 // Default brand tone (yours)
@@ -755,15 +753,15 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
         free: { limit: 0, name: "Free", price: "$0" },
         basic: { limit: 2, name: "Basic", price: "$3" },
         pro: { limit: 10, name: "Pro", price: "$27" },
-        unlimited: { limit: "unlimited", name: "Unlimited", price: "$99+" }
-      } as const;
+        unlimited: { limit: 999999, name: "Unlimited", price: "$99+" }
+      };
 
       const userTier = (user.subscriptionTier || 'free') as keyof typeof tierInfo;
       const currentTier = tierInfo[userTier];
       const canGenerate = await storage.checkUserCanGenerate(parseInt(userId));
 
       // Calculate total available generations
-      const tierLimit = userTier === 'unlimited' ? 999999 : currentTier.limit;
+      const tierLimit = currentTier.limit;
       const totalLimit = tierLimit + (user.generationsLimit || 0);
 
       res.json({
