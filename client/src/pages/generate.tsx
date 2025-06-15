@@ -34,9 +34,12 @@ export default function Generate() {
     progress: 0
   });
 
-  // Get passed data from state (from the previous page)
-  const location = useLocation()[0];
-  const { industry, selectedTopics, userId } = (location as any)?.state || {};
+  // Get passed data from URL params (more reliable than wouter state)
+  const urlParams = new URLSearchParams(window.location.search);
+  const industry = urlParams.get('industry') || '';
+  const selectedTopicsParam = urlParams.get('topics') || '';
+  const selectedTopics = selectedTopicsParam ? selectedTopicsParam.split(',') : [];
+  const userId = parseInt(urlParams.get('userId') || '0');
 
   useEffect(() => {
     // Check for user authentication
@@ -53,7 +56,9 @@ export default function Generate() {
       return;
     }
 
-    if (!industry || !selectedTopics || !userId) {
+    console.log('Generate page data:', { industry, selectedTopics, userId });
+
+    if (!industry || !selectedTopics.length || !userId) {
       toast({
         title: "Missing Information",
         description: "Please go back and fill out the content generation form.",
@@ -64,7 +69,7 @@ export default function Generate() {
     }
 
     generateContent();
-  }, [industry, selectedTopics, userId]);
+  }, [industry, selectedTopics.length, userId]);
 
   // Progress simulation during generation
   useEffect(() => {

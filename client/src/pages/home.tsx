@@ -126,14 +126,14 @@ export default function Home() {
 
     setIsSubmitting(true);
 
-    // Navigate to generate page with form data
-    navigate('/generate', {
-      state: {
-        industry: formData.industry,
-        selectedTopics: allTopics,
-        userId: user?.id
-      }
+    // Navigate to generate page with URL parameters (more reliable)
+    const params = new URLSearchParams({
+      industry: formData.industry,
+      topics: allTopics.join(','),
+      userId: user?.id?.toString() || '0'
     });
+    
+    navigate(`/generate?${params.toString()}`);
   };
 
   if (!user) {
