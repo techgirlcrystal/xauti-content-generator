@@ -72,7 +72,8 @@ export default function Generate() {
         },
         body: JSON.stringify({
           industry: industry.trim(),
-          selected_topics: topics
+          selected_topics: topics,
+          content_type: contentType
         })
       });
 
@@ -247,7 +248,10 @@ export default function Generate() {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Generating Your Content</h3>
                   <p className="text-sm text-gray-600">
-                    Please wait while our AI creates 5 days of personalized content for your industry.
+                    {contentType === 'content-only' 
+                      ? 'Please wait while our AI creates 30 days of personalized content for your industry.'
+                      : 'Please wait while our AI creates 5 days of personalized content with images for your industry.'
+                    }
                   </p>
                 </div>
               </div>

@@ -7,13 +7,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to handle content generation requests (proxy to n8n)
   app.post("/api/content-generate", async (req, res) => {
     try {
-      const { industry, selected_topics } = req.body;
+      const { industry, selected_topics, content_type = 'ai-pics' } = req.body;
       
       if (!industry || !selected_topics) {
         return res.status(400).json({ error: "Industry and selected topics are required" });
       }
 
-      console.log(`Content generation requested for industry: ${industry}`);
+      console.log(`Content generation requested for industry: ${industry}, content type: ${content_type}`);
       
       // Create request record in database
       const contentRequest = await storage.createContentRequest({
@@ -23,15 +23,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
+      // Determine webhook URL based on content type
+      const webhookUrl = content_type === 'content-only' 
+        ? 'https://n8n.srv847085.hstgr.cloud/webhook-test/words-only'
+        : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request';
+
       // Proxy request to n8n webhook with timeout
-      console.log('Sending request to n8n webhook...');
+      console.log(`Sending request to n8n webhook: ${webhookUrl}`);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         console.log('n8n request timeout after 3 minutes');
         controller.abort();
       }, 180000); // 3 minutes timeout
 
-      const n8nResponse = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
+      const n8nResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

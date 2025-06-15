@@ -98,11 +98,19 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
-- June 15, 2025: Database integration completed
+- June 15, 2025: Dual-workflow system implemented
+  - Added content type selection: "AI Pics" (5 days with images) vs "Content" (30 days, text-only)
+  - Integrated two n8n workflows with different webhook endpoints
+  - AI Pics workflow: `https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request`
+  - Content workflow: `https://n8n.srv847085.hstgr.cloud/webhook-test/words-only`
+  - Updated UI with visual selection cards and appropriate labels
+  - Dynamic progress messages based on selected content type
+
+- June 15, 2025: Database integration and CSV download resolution
   - Added PostgreSQL database with content request tracking
   - Created backend API proxy to handle CORS issues with n8n webhook
-  - Database stores all content generation requests with status tracking
-  - Fixed direct webhook calls by routing through backend `/api/content-generate`
+  - Resolved Google Drive CSV download by implementing direct download links
+  - Fixed server errors and implemented robust error handling
 
 - June 15, 2025: Initial setup with enhanced UI and n8n integration
 
