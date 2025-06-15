@@ -291,11 +291,37 @@ export default function Generate() {
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  onClick={downloadCSV}
+                  onClick={() => {
+                    // Extract Google Drive download URL from the CSV content
+                    if (generationState.csvData?.csvBase64) {
+                      try {
+                        const decodedContent = atob(generationState.csvData.csvBase64);
+                        const urlMatch = decodedContent.match(/https:\/\/drive\.google\.com\/uc\?id=[^&\s]+&export=download/);
+                        if (urlMatch) {
+                          window.open(urlMatch[0], '_blank');
+                          toast({
+                            title: "Opening Download",
+                            description: "Opening your CSV file in a new tab.",
+                          });
+                        } else {
+                          downloadCSV();
+                        }
+                      } catch (error) {
+                        downloadCSV();
+                      }
+                    }
+                  }}
                   className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download CSV File
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={downloadCSV}
+                  className="border-[hsl(24,95%,53%)] text-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,53%)] hover:text-white"
+                >
+                  Instructions
                 </Button>
                 <Button
                   variant="outline"

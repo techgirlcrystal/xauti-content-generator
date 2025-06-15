@@ -83,34 +83,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const downloadUrl = responseData.webContentLink;
         filename = responseData.name || 'xauti-content.csv';
         
-        try {
-          // Fetch the actual CSV content from Google Drive
-          const fileResponse = await fetch(downloadUrl);
-          if (fileResponse.ok) {
-            const csvContent = await fileResponse.text();
-            csvBase64 = btoa(csvContent);
-            console.log('Successfully fetched CSV content from Google Drive');
-          } else {
-            throw new Error('Failed to fetch from Google Drive');
-          }
-        } catch (fetchError) {
-          console.log('Could not fetch file content, providing download link instead');
-          // Fallback to providing download instructions
-          const csvContent = `Content Generation Complete!
-File Name: ${filename}
-File Size: ${responseData.size} bytes
-Created: ${responseData.createdTime}
+        // Google Drive files require authentication, so provide direct access instructions
+        console.log('Providing Google Drive download instructions');
+        
+        const csvContent = `IMPORTANT: Your CSV file has been generated successfully!
 
-Your CSV content has been generated successfully.
-Direct Download URL: ${downloadUrl}
+File Details:
+- Name: ${filename}
+- Size: ${responseData.size} bytes
+- Created: ${responseData.createdTime}
 
-To access your content:
-1. Click the download button below to get the file info
-2. Copy the Direct Download URL and paste it in a new browser tab
-3. The CSV file will download automatically`;
-          
-          csvBase64 = btoa(csvContent);
-        }
+DIRECT DOWNLOAD LINK:
+${downloadUrl}
+
+INSTRUCTIONS:
+1. Copy the link above
+2. Paste it in a new browser tab
+3. Your CSV file will download automatically
+
+TO FIX THIS FOR FUTURE GENERATIONS:
+Update your n8n workflow by adding these nodes after creating the CSV:
+
+1. Add "Google Drive - Download" node
+   - Set File ID: {{$json["id"]}}
+   - Set Return Format: "File Content (Base64)"
+
+2. Update your "Respond to Webhook" node to return:
+   {
+     "csvBase64": "{{$json["data"]}}",
+     "filename": "{{$json["name"]}}"
+   }
+
+This will provide direct CSV downloads without requiring Google Drive authentication.`;
+        
+        csvBase64 = btoa(csvContent);
       } else {
         // Fallback - convert entire response to CSV-like format
         console.log('Unknown response format, creating fallback CSV');
