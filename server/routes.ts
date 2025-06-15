@@ -251,7 +251,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         try {
-          const responseData = await n8nResponse.json();
+          const responseText = await n8nResponse.text();
+          console.log('n8n response text:', responseText);
+          
+          if (!responseText || responseText.trim() === '') {
+            console.log('Empty response from n8n, treating as success');
+            await storage.updateContentRequest(contentRequest.id, {
+              status: "processing",
+              completedAt: null
+            });
+            return;
+          }
+          
+          const responseData = JSON.parse(responseText);
           console.log('n8n response data structure:', JSON.stringify(responseData, null, 2));
           
           // Handle CSV response and update database
