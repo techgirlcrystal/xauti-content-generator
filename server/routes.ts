@@ -41,25 +41,45 @@ async function generateScript(industry: string, topics: string[]): Promise<strin
 // Generate a daily script for text-to-speech
 async function generateDailyScript(industry: string, topics: string[], day: number): Promise<string> {
   try {
-    const topicsText = topics.slice(0, 3).join(", "); // Use first 3 topics to keep prompt focused
+    // Create varied prompts based on the day to ensure unique content
+    const topicIndex = (day - 1) % topics.length;
+    const currentTopic = topics[topicIndex] || topics[0];
     
-    const prompt = `Create a 30-second script for Day ${day} of a "${industry}" content series. The script should:
+    const weekNumber = Math.ceil(day / 7);
+    const dayOfWeek = ((day - 1) % 7) + 1;
     
-    - Be exactly 30 seconds when read aloud (about 75-80 words)
-    - Sound natural for text-to-speech generators
-    - Focus on: ${topicsText}
-    - Be specific to day ${day} of a 30-day journey
-    - Include actionable advice
-    - End with encouragement
-    - Use conversational, friendly language
+    let prompt = "";
     
-    Return only the script text, no day numbers or formatting.`;
+    // Create different types of content based on day patterns
+    if (day % 7 === 1) { // Mondays - Motivation
+      prompt = `Create a motivational 30-second script for Day ${day} about ${industry}. Focus on ${currentTopic}. Start the week strong with inspiration and energy. Be uplifting and action-oriented. About 75-80 words for text-to-speech.`;
+    } else if (day % 7 === 2) { // Tuesdays - Tips
+      prompt = `Create a practical tip script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share actionable advice that listeners can implement today. Be specific and helpful. About 75-80 words for text-to-speech.`;
+    } else if (day % 7 === 3) { // Wednesdays - Stories
+      prompt = `Create a story-based script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share a relatable scenario or example. Make it personal and engaging. About 75-80 words for text-to-speech.`;
+    } else if (day % 7 === 4) { // Thursdays - Insights
+      prompt = `Create an insightful script for Day ${day} about ${industry}. Focus on ${currentTopic}. Share a deeper perspective or revelation. Be thoughtful and meaningful. About 75-80 words for text-to-speech.`;
+    } else if (day % 7 === 5) { // Fridays - Encouragement
+      prompt = `Create an encouraging script for Day ${day} about ${industry}. Focus on ${currentTopic}. Help listeners feel confident and supported. End the week on a positive note. About 75-80 words for text-to-speech.`;
+    } else if (day % 7 === 6) { // Saturdays - Reflection
+      prompt = `Create a reflective script for Day ${day} about ${industry}. Focus on ${currentTopic}. Encourage thoughtful consideration and self-assessment. Be gentle and introspective. About 75-80 words for text-to-speech.`;
+    } else { // Sundays - Vision
+      prompt = `Create a visionary script for Day ${day} about ${industry}. Focus on ${currentTopic}. Paint a picture of the future and possibilities. Be hopeful and forward-looking. About 75-80 words for text-to-speech.`;
+    }
+    
+    prompt += ` 
+
+    IMPORTANT: 
+    - Create completely unique content (no repetitive phrases or openings)
+    - Make it sound natural when read by Eleven Labs AI voice
+    - Vary sentence structure and vocabulary
+    - Return only the script text, no formatting or day numbers`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 100,
-      temperature: 0.8, // Slightly higher temperature for variety
+      max_tokens: 120,
+      temperature: 0.9, // Higher temperature for more creativity
     });
 
     return response.choices[0]?.message?.content?.trim() || `Today's focus in ${industry}: Build meaningful connections with your audience. Share your authentic story and valuable insights. Consistency beats perfection. Keep moving forward!`;
