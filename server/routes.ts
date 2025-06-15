@@ -1,6 +1,42 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import OpenAI from "openai";
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Generate a 30-second script for text-to-speech
+async function generateScript(industry: string, topics: string[]): Promise<string> {
+  try {
+    const topicsText = topics.join(", ");
+    
+    const prompt = `Create a compelling 30-second script for content creators in the "${industry}" industry. The script should:
+    
+    - Be exactly 30 seconds when read aloud (about 75-80 words)
+    - Sound natural and engaging for text-to-speech
+    - Reference these key topics: ${topicsText}
+    - Include a clear call-to-action
+    - Be inspiring and actionable
+    - Use simple, conversational language
+    
+    Return only the script text, no additional formatting or explanations.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 100,
+      temperature: 0.7,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || "Your content journey starts today. Take action, stay consistent, and watch your audience grow.";
+  } catch (error) {
+    console.error("Error generating script:", error);
+    return `Welcome to your 30-day ${industry} content journey! Today marks the beginning of consistent, engaging content that will transform your audience. Every post, every story, every connection matters. Start today, stay committed, and watch your community flourish. Your voice matters - let it be heard!`;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   

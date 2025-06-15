@@ -20,6 +20,7 @@ export const contentRequests = pgTable("content_requests", {
   status: text("status").notNull().default("pending"), // pending, processing, completed, failed
   csvFilename: text("csv_filename"),
   csvBase64: text("csv_base64"),
+  scriptContent: text("script_content"), // 30-second script for text-to-speech
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
