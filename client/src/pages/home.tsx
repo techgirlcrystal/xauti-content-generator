@@ -108,19 +108,59 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
+      // Prepare request data in multiple formats for n8n compatibility
+      const requestData = {
+        industry: formData.industry.trim(),
+        selected_topics: allTopics
+      };
+      console.log('Sending request to n8n:', requestData);
+      
+      // Try JSON format first (most common)
+      let response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          industry: formData.industry.trim(),
-          selected_topics: allTopics
-        })
+        body: JSON.stringify(requestData)
       });
 
+      // If JSON fails, try form-encoded format
+      if (!response.ok && response.status !== 200) {
+        console.log('JSON request failed, trying form-encoded format...');
+        const formData = new FormData();
+        formData.append('industry', requestData.industry);
+        formData.append('selected_topics', JSON.stringify(requestData.selected_topics));
+        
+        response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
+          method: 'POST',
+          body: formData
+        });
+      }
+
+      // If form data fails, try URL-encoded format
+      if (!response.ok && response.status !== 200) {
+        console.log('Form data failed, trying URL-encoded format...');
+        const params = new URLSearchParams();
+        params.append('industry', requestData.industry);
+        params.append('selected_topics', JSON.stringify(requestData.selected_topics));
+        
+        response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params
+        });
+      }
+
+      console.log('Final response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
