@@ -102,7 +102,7 @@ This is a full-stack web application built for generating content based on user-
   - Added content type selection: "AI Pics" (5 days with images) vs "Content" (30 days, text-only)
   - Integrated two n8n workflows with different webhook endpoints
   - AI Pics workflow: `https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request`
-  - Content workflow: `https://n8n.srv847085.hstgr.cloud/webhook-test/words-only`
+  - Content workflow: `https://n8n.srv847085.hstgr.cloud/webhook/words-only`
   - Updated UI with visual selection cards and appropriate labels
   - Dynamic progress messages based on selected content type
 

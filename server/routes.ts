@@ -102,12 +102,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Google Drive files require authentication, so provide direct access instructions
         console.log('Providing Google Drive download instructions');
         
-        const csvContent = `IMPORTANT: Your CSV file has been generated successfully!
+        const workflowType = content_type === 'content-only' ? '30-day content' : '5-day AI image content';
+        const csvContent = `IMPORTANT: Your ${workflowType} has been generated successfully!
 
 File Details:
 - Name: ${filename}
 - Size: ${responseData.size} bytes
 - Created: ${responseData.createdTime}
+- Content Type: ${workflowType}
 
 DIRECT DOWNLOAD LINK:
 ${downloadUrl}
@@ -118,7 +120,7 @@ INSTRUCTIONS:
 3. Your CSV file will download automatically
 
 TO FIX THIS FOR FUTURE GENERATIONS:
-Update your n8n workflow by adding these nodes after creating the CSV:
+Both your n8n workflows need the same update - add these nodes after creating the CSV:
 
 1. Add "Google Drive - Download" node
    - Set File ID: {{$json["id"]}}
@@ -130,7 +132,11 @@ Update your n8n workflow by adding these nodes after creating the CSV:
      "filename": "{{$json["name"]}}"
    }
 
-This will provide direct CSV downloads without requiring Google Drive authentication.`;
+This applies to BOTH workflows:
+- AI Pics workflow: ${content_type === 'ai-pics' ? 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request' : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request'}
+- Content workflow: ${content_type === 'content-only' ? 'https://n8n.srv847085.hstgr.cloud/webhook/words-only' : 'https://n8n.srv847085.hstgr.cloud/webhook/words-only'}
+
+Both need the same Google Drive download fix for direct CSV downloads.`;
         
         csvBase64 = btoa(csvContent);
       } else {
