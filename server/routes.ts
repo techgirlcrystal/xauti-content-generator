@@ -211,6 +211,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Content generation requested for industry: ${industry}, user: ${userId}`);
       console.log(`Selected topics:`, selected_topics);
       
+      // Check if user can generate content based on subscription tier
+      const canGenerate = await storage.checkUserCanGenerate(userId);
+      if (!canGenerate) {
+        const user = await storage.getUser(userId);
+        const tierInfo = {
+          free: { limit: 0, name: "Free" },
+          basic: { limit: 2, name: "$3 Basic" },
+          pro: { limit: 10, name: "$27 Pro" },
+          unlimited: { limit: "unlimited", name: "$99+ Unlimited" }
+        };
+        
+        const currentTier = tierInfo[user?.subscriptionTier || 'free'];
+        
+        return res.status(403).json({
+          success: false,
+          message: "Generation limit reached",
+          error: "GENERATION_LIMIT_EXCEEDED",
+          currentTier: user?.subscriptionTier || 'free',
+          generationsUsed: user?.generationsUsed || 0,
+          generationsLimit: user?.generationsLimit || 0,
+          tierLimit: currentTier.limit,
+          tierName: currentTier.name
+        });
+      }
+      
       // Create request record in database
       contentRequest = await storage.createContentRequest({
         userId,
@@ -324,6 +349,9 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
               csvBase64: csvBase64,
               completedAt: new Date()
             });
+            
+            // Increment user's generation count for usage tracking
+            await storage.incrementUserGenerations(contentRequest.userId);
             
             console.log(`Google Drive file stored for request ${contentRequest.id}: ${downloadUrl}`);
             return; // Exit early since we handled the storage update
