@@ -12,6 +12,7 @@ interface FormData {
   industry: string;
   selectedTopics: string[];
   customTopic: string;
+  contentType: 'ai-pics' | 'content-only';
 }
 
 interface ValidationError {
@@ -36,7 +37,8 @@ export default function Home() {
   const [formData, setFormData] = useState<FormData>({
     industry: '',
     selectedTopics: [],
-    customTopic: ''
+    customTopic: '',
+    contentType: 'ai-pics'
   });
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
@@ -83,6 +85,7 @@ export default function Home() {
     // Store data in session storage for the generate page
     sessionStorage.setItem('pendingIndustry', formData.industry.trim());
     sessionStorage.setItem('pendingTopics', JSON.stringify(allTopics));
+    sessionStorage.setItem('pendingContentType', formData.contentType);
 
     // Navigate to generate page
     setLocation('/generate');
@@ -92,7 +95,8 @@ export default function Home() {
     setFormData({
       industry: '',
       selectedTopics: [],
-      customTopic: ''
+      customTopic: '',
+      contentType: 'ai-pics'
     });
     setValidationErrors([]);
   };
@@ -131,6 +135,39 @@ export default function Home() {
           
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Content Type Selection */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-gray-700">
+                  Content Type <span className="text-red-500">*</span>
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div 
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      formData.contentType === 'ai-pics' 
+                        ? 'border-[hsl(24,95%,53%)] bg-orange-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => setFormData(prev => ({ ...prev, contentType: 'ai-pics' }))}
+                  >
+                    <h3 className="font-semibold text-gray-900 mb-2">AI Pics</h3>
+                    <p className="text-sm text-gray-600 mb-2">5 days of content with AI-generated images</p>
+                    <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Beta</span>
+                  </div>
+                  <div 
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      formData.contentType === 'content-only' 
+                        ? 'border-[hsl(24,95%,53%)] bg-orange-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => setFormData(prev => ({ ...prev, contentType: 'content-only' }))}
+                  >
+                    <h3 className="font-semibold text-gray-900 mb-2">Content</h3>
+                    <p className="text-sm text-gray-600 mb-2">30 days of content - add your own images</p>
+                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">30 days of content</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Industry Input */}
               <div className="space-y-2">
                 <Label htmlFor="industry" className="text-sm font-medium text-gray-700">

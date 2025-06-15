@@ -30,6 +30,7 @@ export default function Generate() {
   const industry = urlParams.get('industry') || sessionStorage.getItem('pendingIndustry') || '';
   const topics = urlParams.get('topics')?.split(',') || 
                 JSON.parse(sessionStorage.getItem('pendingTopics') || '[]');
+  const contentType = sessionStorage.getItem('pendingContentType') || 'ai-pics';
 
   useEffect(() => {
     if (!industry || topics.length === 0) {
