@@ -1,16 +1,22 @@
-import { users, contentRequests, type User, type InsertUser, type ContentRequest, type InsertContentRequest } from "@shared/schema";
+import { users, contentRequests, generationPurchases, type User, type InsertUser, type ContentRequest, type InsertContentRequest, type GenerationPurchase, type InsertGenerationPurchase } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStreak(id: number, streak: number, lastDate: string): Promise<User>;
+  updateUserSubscription(id: number, subscription: Partial<User>): Promise<User>;
+  incrementUserGenerations(id: number): Promise<User>;
+  addGenerationsToUser(id: number, generations: number): Promise<User>;
+  checkUserCanGenerate(id: number): Promise<boolean>;
   createContentRequest(request: InsertContentRequest): Promise<ContentRequest>;
   getContentRequest(id: number): Promise<ContentRequest | undefined>;
   updateContentRequest(id: number, updates: Partial<ContentRequest>): Promise<ContentRequest>;
   getContentRequestsByUserId(userId: number): Promise<ContentRequest[]>;
+  createGenerationPurchase(purchase: InsertGenerationPurchase): Promise<GenerationPurchase>;
+  getGenerationPurchasesByUserId(userId: number): Promise<GenerationPurchase[]>;
 }
 
 export class DatabaseStorage implements IStorage {

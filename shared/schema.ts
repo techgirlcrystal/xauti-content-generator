@@ -10,6 +10,14 @@ export const users = pgTable("users", {
   contentStreak: integer("content_streak").default(0),
   lastContentDate: date("last_content_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  subscriptionTier: text("subscription_tier").default("free"), // free, basic, pro, unlimited
+  generationsUsed: integer("generations_used").default(0),
+  generationsLimit: integer("generations_limit").default(0),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status").default("inactive"), // active, inactive, canceled, past_due
+  subscriptionEndDate: timestamp("subscription_end_date"),
+  tags: text("tags").array().default([]) // For HighLevel integration
 });
 
 export const contentRequests = pgTable("content_requests", {
@@ -28,8 +36,19 @@ export const contentRequests = pgTable("content_requests", {
   completedAt: timestamp("completed_at"),
 });
 
+export const generationPurchases = pgTable("generation_purchases", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  generationsAdded: integer("generations_added").notNull(),
+  amountPaid: integer("amount_paid").notNull(), // in cents
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  paymentStatus: text("payment_status").default("pending"), // pending, completed, failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   contentRequests: many(contentRequests),
+  generationPurchases: many(generationPurchases),
 }));
 
 export const contentRequestsRelations = relations(contentRequests, ({ one }) => ({
@@ -39,11 +58,20 @@ export const contentRequestsRelations = relations(contentRequests, ({ one }) => 
   }),
 }));
 
+export const generationPurchasesRelations = relations(generationPurchases, ({ one }) => ({
+  user: one(users, {
+    fields: [generationPurchases.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   contentStreak: true,
   lastContentDate: true,
   createdAt: true,
+  generationsUsed: true,
+  subscriptionEndDate: true,
 });
 
 export const insertContentRequestSchema = createInsertSchema(contentRequests).pick({
@@ -53,7 +81,14 @@ export const insertContentRequestSchema = createInsertSchema(contentRequests).pi
   status: true,
 });
 
+export const insertGenerationPurchaseSchema = createInsertSchema(generationPurchases).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertContentRequest = z.infer<typeof insertContentRequestSchema>;
 export type ContentRequest = typeof contentRequests.$inferSelect;
+export type InsertGenerationPurchase = z.infer<typeof insertGenerationPurchaseSchema>;
+export type GenerationPurchase = typeof generationPurchases.$inferSelect;
