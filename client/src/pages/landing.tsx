@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 export default function Landing() {
   const [, navigate] = useLocation();
@@ -40,7 +39,7 @@ export default function Landing() {
     setIsLoading(true);
     
     try {
-      const response = await apiRequest("/api/auth/signin", {
+      const response = await fetch("/api/auth/signin", {
         method: "POST",
         body: JSON.stringify(formData),
         headers: {

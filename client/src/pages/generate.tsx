@@ -17,6 +17,14 @@ interface GenerationState {
   error?: string;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  contentStreak: number;
+  lastContentDate: string | null;
+}
+
 export default function Generate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -25,22 +33,37 @@ export default function Generate() {
     progress: 0
   });
 
-  // Get request data from URL params or session storage
-  const urlParams = new URLSearchParams(window.location.search);
-  const industry = urlParams.get('industry') || sessionStorage.getItem('pendingIndustry') || '';
-  const topics = urlParams.get('topics')?.split(',') || 
-                JSON.parse(sessionStorage.getItem('pendingTopics') || '[]');
-  const contentType = sessionStorage.getItem('pendingContentType') || 'ai-pics';
+  // Get passed data from state (from the previous page)
+  const location = useLocation()[0];
+  const { industry, selectedTopics, userId } = (location as any)?.state || {};
 
   useEffect(() => {
-    if (!industry || topics.length === 0) {
-      // Redirect back to home if no data
+    // Check for user authentication
+    const storedUser = localStorage.getItem("xauti_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        setLocation('/');
+        return;
+      }
+    } else {
       setLocation('/');
       return;
     }
 
+    if (!industry || !selectedTopics || !userId) {
+      toast({
+        title: "Missing Information",
+        description: "Please go back and fill out the content generation form.",
+        variant: "destructive"
+      });
+      setLocation('/home');
+      return;
+    }
+
     generateContent();
-  }, []);
+  }, [industry, selectedTopics, userId]);
 
   // Progress simulation during generation
   useEffect(() => {
