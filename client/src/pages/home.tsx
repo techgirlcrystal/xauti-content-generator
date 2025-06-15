@@ -108,83 +108,71 @@ export default function Home() {
     }
 
     try {
-      // Prepare request data in multiple formats for n8n compatibility
+      // Prepare request data for n8n webhook
       const requestData = {
         industry: formData.industry.trim(),
         selected_topics: allTopics
       };
       console.log('Sending request to n8n:', requestData);
       
-      // Try JSON format first (most common)
-      let response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(requestData)
-      });
-
-      // If JSON fails, try form-encoded format
-      if (!response.ok && response.status !== 200) {
-        console.log('JSON request failed, trying form-encoded format...');
-        const formData = new FormData();
-        formData.append('industry', requestData.industry);
-        formData.append('selected_topics', JSON.stringify(requestData.selected_topics));
-        
-        response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
-          method: 'POST',
-          body: formData
-        });
-      }
-
-      // If form data fails, try URL-encoded format
-      if (!response.ok && response.status !== 200) {
-        console.log('Form data failed, trying URL-encoded format...');
-        const params = new URLSearchParams();
-        params.append('industry', requestData.industry);
-        params.append('selected_topics', JSON.stringify(requestData.selected_topics));
-        
-        response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
+      // Set a timeout for the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
+      
+      try {
+        const response = await fetch('https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json'
           },
-          body: params
+          body: JSON.stringify(requestData),
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
+        console.log('Response received - status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Response error:', errorText);
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+
+        const responseData = await response.json();
+        console.log('Response data received:', responseData);
+        
+        // Complete progress
+        setProgress(100);
+
+        // Download CSV
+        const link = document.createElement('a');
+        link.href = 'data:text/csv;base64,' + responseData.csvBase64;
+        link.download = responseData.filename || 'xauti-content.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setStatusMessage({
+          message: 'Content generated successfully! Your CSV file has been downloaded.',
+          type: 'success'
+        });
+
+        toast({
+          title: "Success!",
+          description: "Your content has been generated and downloaded.",
+        });
+
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        console.error('Fetch error:', fetchError);
+        
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out after 3 minutes. Please check if your n8n workflow is active and running.');
+        } else {
+          throw fetchError;
+        }
       }
-
-      console.log('Final response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      
-      // Complete progress
-      setProgress(100);
-
-      // Download CSV
-      const link = document.createElement('a');
-      link.href = 'data:text/csv;base64,' + data.csvBase64;
-      link.download = data.filename || 'xauti-content.csv';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      setStatusMessage({
-        message: 'Content generated successfully! Your CSV file has been downloaded.',
-        type: 'success'
-      });
-
-      toast({
-        title: "Success!",
-        description: "Your content has been generated and downloaded.",
-      });
 
     } catch (error) {
       console.error('Error generating content:', error);
