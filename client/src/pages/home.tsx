@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,17 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Edit, AlertCircle, Info } from "lucide-react";
+import { Calendar, Trophy, User, LogOut, Sparkles } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface FormData {
   industry: string;
   selectedTopics: string[];
   customTopic: string;
-  contentType: 'ai-pics' | 'content-only';
 }
 
-interface ValidationError {
-  message: string;
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  contentStreak: number;
+  lastContentDate: string | null;
 }
 
 const PREDEFINED_TOPICS = [
@@ -28,32 +32,59 @@ const PREDEFINED_TOPICS = [
   {
     id: 'current_trends',
     label: 'Current Trends & News',
-    description: 'Latest industry developments and trending topics'
+    description: 'Latest developments and trending topics in your industry'
+  },
+  {
+    id: 'behind_scenes',
+    label: 'Behind the Scenes',
+    description: 'Personal stories and day-to-day business insights'
+  },
+  {
+    id: 'customer_stories',
+    label: 'Customer Success Stories',
+    description: 'Testimonials and case studies from satisfied clients'
+  },
+  {
+    id: 'tips_advice',
+    label: 'Tips & Advice',
+    description: 'Educational content and best practices'
+  },
+  {
+    id: 'future_vision',
+    label: 'Future Vision',
+    description: 'Industry predictions and forward-thinking content'
   }
 ];
 
 export default function Home() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<FormData>({
-    industry: '',
+    industry: "",
     selectedTopics: [],
-    customTopic: '',
-    contentType: 'ai-pics'
+    customTopic: ""
   });
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateForm = (): ValidationError[] => {
-    const errors: ValidationError[] = [];
-    
-    if (!formData.industry.trim()) {
-      errors.push({ message: 'Industry is required' });
+  useEffect(() => {
+    // Check for user in localStorage
+    const storedUser = localStorage.getItem("xauti_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        localStorage.removeItem("xauti_user");
+        navigate("/");
+      }
+    } else {
+      navigate("/");
     }
-    
-    if (formData.selectedTopics.length === 0 && !formData.customTopic.trim()) {
-      errors.push({ message: 'Please select at least one predefined topic or enter a custom topic' });
-    }
-    
-    return errors;
+  }, [navigate]);
+
+  const handleSignOut = () => {
+    localStorage.removeItem("xauti_user");
+    navigate("/");
   };
 
   const handleTopicChange = (topicId: string, checked: boolean) => {
@@ -68,245 +99,154 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const errors = validateForm();
-    if (errors.length > 0) {
-      setValidationErrors(errors);
+    if (!formData.industry.trim()) {
+      toast({
+        title: "Missing Industry",
+        description: "Please enter your industry or business type.",
+        variant: "destructive"
+      });
       return;
     }
 
-    setValidationErrors([]);
-
-    // Prepare topics array
     const allTopics = [...formData.selectedTopics];
     if (formData.customTopic.trim()) {
       allTopics.push(formData.customTopic.trim());
     }
 
-    // Store data in session storage for the generate page
-    sessionStorage.setItem('pendingIndustry', formData.industry.trim());
-    sessionStorage.setItem('pendingTopics', JSON.stringify(allTopics));
-    sessionStorage.setItem('pendingContentType', formData.contentType);
+    if (allTopics.length === 0) {
+      toast({
+        title: "No Topics Selected",
+        description: "Please select at least one topic or add a custom topic.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Navigate to generate page
-    setLocation('/generate');
-  };
+    setIsSubmitting(true);
 
-  const handleReset = () => {
-    setFormData({
-      industry: '',
-      selectedTopics: [],
-      customTopic: '',
-      contentType: 'ai-pics'
+    // Navigate to generate page with form data
+    navigate('/generate', {
+      state: {
+        industry: formData.industry,
+        selectedTopics: allTopics,
+        userId: user?.id
+      }
     });
-    setValidationErrors([]);
   };
 
-  const handleFieldBlur = () => {
-    const errors = validateForm();
-    setValidationErrors(errors);
-  };
+  if (!user) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[hsl(24,95%,53%)] rounded-lg flex items-center justify-center">
-              <Edit className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      {/* Header with user info and streak */}
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <div className="bg-blue-100 p-3 rounded-full">
+                <User className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user.name}!</h1>
+                <p className="text-gray-600">{user.email}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Xauti Content Generator</h1>
-              <p className="text-sm text-gray-600">Generate 5 days of engaging content for your industry</p>
+            <div className="flex items-center space-x-6">
+              <div className="text-center">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <span className="text-2xl font-bold text-gray-900">{user.contentStreak || 0}</span>
+                </div>
+                <p className="text-sm text-gray-600">Content Streak</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Calendar className="h-5 w-5 text-blue-500" />
+                  <span className="text-lg font-semibold text-gray-900">Day {user.contentStreak || 1}</span>
+                </div>
+                <p className="text-sm text-gray-600">of 30</p>
+              </div>
+              <Button variant="outline" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Content Generator Form */}
-        <Card className="shadow-sm border-gray-200 overflow-hidden">
-          <CardHeader className="bg-gray-50 border-b border-gray-200">
-            <CardTitle className="text-lg font-semibold text-gray-900">Content Configuration</CardTitle>
-            <CardDescription className="text-sm text-gray-600">
-              Customize your content generation parameters
+      {/* Main content form */}
+      <div className="max-w-4xl mx-auto">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Sparkles className="h-6 w-6 text-blue-600" />
+              <CardTitle>Generate Your 30-Day Content</CardTitle>
+            </div>
+            <CardDescription>
+              Create engaging content for your business and maintain your streak
             </CardDescription>
           </CardHeader>
-          
-          <CardContent className="p-6">
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Content Type Selection */}
-              <div className="space-y-4">
-                <Label className="text-sm font-medium text-gray-700">
-                  Content Type <span className="text-red-500">*</span>
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div 
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      formData.contentType === 'ai-pics' 
-                        ? 'border-[hsl(24,95%,53%)] bg-orange-50' 
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    onClick={() => setFormData(prev => ({ ...prev, contentType: 'ai-pics' }))}
-                  >
-                    <h3 className="font-semibold text-gray-900 mb-2">AI Pics</h3>
-                    <p className="text-sm text-gray-600 mb-2">5 days of content with AI-generated images</p>
-                    <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Beta</span>
-                  </div>
-                  <div 
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      formData.contentType === 'content-only' 
-                        ? 'border-[hsl(24,95%,53%)] bg-orange-50' 
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    onClick={() => setFormData(prev => ({ ...prev, contentType: 'content-only' }))}
-                  >
-                    <h3 className="font-semibold text-gray-900 mb-2">Content</h3>
-                    <p className="text-sm text-gray-600 mb-2">30 days of content - add your own images</p>
-                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">30 days of content</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Industry Input */}
-              <div className="space-y-2">
-                <Label htmlFor="industry" className="text-sm font-medium text-gray-700">
-                  Industry <span className="text-red-500">*</span>
-                </Label>
+              <div>
+                <Label htmlFor="industry">Industry or Business Type</Label>
                 <Input
                   id="industry"
-                  type="text"
-                  placeholder="e.g., Fitness, Real Estate, Digital Marketing"
+                  placeholder="e.g., Digital Marketing, Real Estate, Fitness Coaching"
                   value={formData.industry}
-                  onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                  onBlur={handleFieldBlur}
-                  className="focus-brand-orange"
+                  onChange={(e) => setFormData(prev => ({...prev, industry: e.target.value}))}
+                  disabled={isSubmitting}
                 />
-                <p className="text-xs text-gray-500">
-                  Specify your business sector for targeted content generation
-                </p>
               </div>
 
-              {/* Topic Selection */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">
-                    Content Topics <span className="text-red-500">*</span>
-                  </h3>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Select at least one predefined topic or add your own custom topic
-                  </p>
-                </div>
-                
-                {/* Predefined Topics */}
-                <div className="space-y-3">
+              <div>
+                <Label>Content Topics (Select all that apply)</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   {PREDEFINED_TOPICS.map((topic) => (
-                    <div key={topic.id} className="flex items-start space-x-3">
+                    <div key={topic.id} className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-gray-50">
                       <Checkbox
                         id={topic.id}
                         checked={formData.selectedTopics.includes(topic.id)}
                         onCheckedChange={(checked) => handleTopicChange(topic.id, checked as boolean)}
-                        className="mt-1 data-[state=checked]:bg-[hsl(24,95%,53%)] data-[state=checked]:border-[hsl(24,95%,53%)]"
+                        disabled={isSubmitting}
                       />
                       <div className="flex-1">
-                        <Label htmlFor={topic.id} className="text-sm font-medium text-gray-700 cursor-pointer">
+                        <label htmlFor={topic.id} className="text-sm font-medium cursor-pointer">
                           {topic.label}
-                        </Label>
-                        <p className="text-xs text-gray-500">{topic.description}</p>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">{topic.description}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-
-                {/* Custom Topic Input */}
-                <div className="pt-4 border-t border-gray-200">
-                  <Label htmlFor="customTopic" className="block text-sm font-medium text-gray-700 mb-2">
-                    Custom Topic (Optional)
-                  </Label>
-                  <Input
-                    id="customTopic"
-                    type="text"
-                    placeholder="e.g., Customer Success Stories, Product Tutorials, Behind the Scenes"
-                    value={formData.customTopic}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customTopic: e.target.value }))}
-                    onBlur={handleFieldBlur}  
-                    className="focus-brand-orange"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Add your own content theme not covered by the predefined topics
-                  </p>
-                </div>
               </div>
 
-              {/* Validation Messages */}
-              {validationErrors.length > 0 && (
-                <div className="space-y-2">
-                  {validationErrors.map((error, index) => (
-                    <div key={index} className="flex items-center space-x-2 text-red-600 text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{error.message}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button
-                  type="submit"
-                  className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
-                >
-                  Generate Content
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleReset}
-                  className="sm:w-auto"
-                >
-                  Reset Form
-                </Button>
+              <div>
+                <Label htmlFor="customTopic">Custom Topic (Optional)</Label>
+                <Input
+                  id="customTopic"
+                  placeholder="Add your own specific topic..."
+                  value={formData.customTopic}
+                  onChange={(e) => setFormData(prev => ({...prev, customTopic: e.target.value}))}
+                  disabled={isSubmitting}
+                />
               </div>
+
+              <Alert>
+                <Calendar className="h-4 w-4" />
+                <AlertDescription>
+                  This will generate 30 days of content specifically tailored to your industry and selected topics.
+                  Keep building your streak by generating content daily!
+                </AlertDescription>
+              </Alert>
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Generating..." : "Generate 30-Day Content"}
+              </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Info Panel */}
-        <Card className="mt-8 bg-blue-50 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="text-sm font-medium text-blue-900">How it works</h3>
-                <div className="mt-2 text-sm text-blue-700 space-y-1">
-                  <p>• Select your industry and content topics</p>
-                  <p>• Our AI generates 5 days of tailored content</p>
-                  <p>• Download your content as a CSV file</p>
-                  <p>• Use the content across your marketing channels</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Troubleshooting Panel */}
-        <Card className="mt-6 bg-yellow-50 border-yellow-200">
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="text-sm font-medium text-yellow-900">n8n Webhook Troubleshooting</h3>
-                <div className="mt-2 text-sm text-yellow-700 space-y-1">
-                  <p><strong>If the webhook isn't triggering:</strong></p>
-                  <p>• Ensure your n8n workflow is <strong>active/published</strong></p>
-                  <p>• Check that the webhook node is set to accept <strong>POST</strong> requests</p>
-                  <p>• Verify the webhook URL matches exactly: <code className="bg-yellow-200 px-1 rounded text-xs">dashboard-content-request</code></p>
-                  <p>• Test the webhook independently using the n8n test feature</p>
-                  <p>• Check browser console (F12) for detailed error logs</p>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
