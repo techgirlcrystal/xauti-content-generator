@@ -98,6 +98,15 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 15, 2025: n8n Workflow Timeout Resolution and Google Drive Integration
+  - Fixed server crashes caused by undefined variables in routes
+  - Implemented polling-based system to handle long-running n8n workflows
+  - Removed 2-minute timeout limitations - workflows can now run indefinitely
+  - Added proper Google Drive file detection and download handling
+  - Updated UI text to correctly show "30 days of content" instead of "5 days"
+  - Users now get proper Google Drive CSV files with full 30-day content calendars
+  - Improved error handling and user feedback during content generation
+
 - June 15, 2025: Complete 30-day content streak system implementation
   - Removed AI Pics option - focused exclusively on 30-day content generation
   - Implemented name/email sign-in system with automatic user creation

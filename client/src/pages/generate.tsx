@@ -392,7 +392,7 @@ export default function Generate() {
                 <div>
                   <h3 className="text-lg font-medium text-green-900">Content Generated Successfully!</h3>
                   <p className="text-sm text-green-700">
-                    Your 5 days of content is ready for download.
+                    Your 30 days of content is ready for download.
                   </p>
                 </div>
               </div>
@@ -409,7 +409,7 @@ export default function Generate() {
                           window.open(urlMatch[0], '_blank');
                           toast({
                             title: "Opening Download",
-                            description: "Opening your CSV file in a new tab.",
+                            description: "Opening your 30 days of content in a new tab.",
                           });
                         } else {
                           downloadCSV();
@@ -422,7 +422,7 @@ export default function Generate() {
                   className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download CSV File
+                  Download 30 Days of Content
                 </Button>
                 <Button
                   variant="outline"

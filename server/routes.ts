@@ -146,8 +146,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (responseData.content) {
             csvBase64 = responseData.content;
             filename = responseData.filename || responseData.name || filename;
+          } else if (responseData.kind === 'drive#file') {
+            // Google Drive file - provide direct download instructions
+            console.log('Detected Google Drive file response');
+            
+            const downloadUrl = responseData.webContentLink;
+            filename = responseData.name || 'xauti-content.csv';
+            
+            // Create instructions for accessing the Google Drive file
+            const instructionsContent = `YOUR 30 DAYS OF CONTENT IS READY!
+
+File Details:
+- Name: ${filename}
+- Size: ${Math.round(responseData.size / 1024)} KB
+- Created: ${new Date(responseData.createdTime).toLocaleDateString()}
+
+TO DOWNLOAD YOUR CONTENT:
+Click the download button below to open your CSV file directly from Google Drive.
+
+Direct Download Link:
+${downloadUrl}
+
+WHAT'S INCLUDED:
+✓ 30 days of personalized social media content
+✓ Platform-specific formatting (Facebook, Instagram, LinkedIn, etc.)
+✓ Hashtags and engagement prompts
+✓ Posting schedule and timing recommendations
+
+NEED HELP?
+If the download doesn't work automatically:
+1. Right-click the download button
+2. Select "Open link in new tab"
+3. Your CSV file will download immediately
+
+File ID: ${responseData.id}
+Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
+            
+            csvBase64 = btoa(instructionsContent);
+            
+            // Store the download instructions and URL in the CSV content
+            await storage.updateContentRequest(contentRequest.id, {
+              status: "completed",
+              csvFilename: filename,
+              csvBase64: csvBase64,
+              completedAt: new Date()
+            });
+            
+            console.log(`Google Drive file stored for request ${contentRequest.id}: ${downloadUrl}`);
+            return; // Exit early since we handled the storage update
           } else {
             // Fallback - create a simple CSV
+            console.log('Unknown response format, creating fallback CSV');
             const csvContent = `Industry,Topics,Status,Timestamp\n"${industry}","${selected_topics.join('; ')}","Completed","${new Date().toISOString()}"`;
             csvBase64 = btoa(csvContent);
           }
