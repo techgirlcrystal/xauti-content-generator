@@ -28,6 +28,7 @@ interface User {
 export default function Generate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
   const [generationState, setGenerationState] = useState<GenerationState>({
     status: 'generating',
     progress: 0
@@ -95,8 +96,8 @@ export default function Generate() {
         },
         body: JSON.stringify({
           industry: industry.trim(),
-          selected_topics: topics,
-          content_type: contentType
+          selected_topics: selectedTopics,
+          userId: userId
         })
       });
 
@@ -116,9 +117,7 @@ export default function Generate() {
         }
       });
 
-      // Clean up session storage
-      sessionStorage.removeItem('pendingIndustry');
-      sessionStorage.removeItem('pendingTopics');
+      // Content generation completed successfully
 
       toast({
         title: "Success!",
@@ -249,7 +248,7 @@ export default function Generate() {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Topics</h3>
                 <div className="space-y-1">
-                  {topics.map((topic: string, index: number) => (
+                  {selectedTopics?.map((topic: string, index: number) => (
                     <p key={index} className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded">
                       {topic}
                     </p>
@@ -271,10 +270,7 @@ export default function Generate() {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Generating Your Content</h3>
                   <p className="text-sm text-gray-600">
-                    {contentType === 'content-only' 
-                      ? 'Please wait while our AI creates 30 days of personalized content for your industry.'
-                      : 'Please wait while our AI creates 5 days of personalized content with images for your industry.'
-                    }
+                    Please wait while we create 30 days of personalized content for your industry.
                   </p>
                 </div>
               </div>
