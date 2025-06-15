@@ -14,10 +14,29 @@ function Router() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for user authentication
-    const storedUser = localStorage.getItem("xauti_user");
-    setIsAuthenticated(!!storedUser);
-    setIsLoading(false);
+    const checkAuth = () => {
+      const storedUser = localStorage.getItem("xauti_user");
+      setIsAuthenticated(!!storedUser);
+      setIsLoading(false);
+    };
+
+    // Initial check
+    checkAuth();
+
+    // Listen for storage changes (including when localStorage is cleared)
+    const handleStorageChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom events when localStorage is changed in the same tab
+    window.addEventListener('auth-changed', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-changed', handleStorageChange);
+    };
   }, []);
 
   if (isLoading) {

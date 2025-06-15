@@ -84,6 +84,8 @@ export default function Home() {
 
   const handleSignOut = () => {
     localStorage.removeItem("xauti_user");
+    // Trigger custom event to notify App component of auth change
+    window.dispatchEvent(new Event('auth-changed'));
     navigate("/");
   };
 

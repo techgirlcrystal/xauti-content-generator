@@ -53,6 +53,9 @@ export default function Landing() {
         // Store user in localStorage
         localStorage.setItem("xauti_user", JSON.stringify(data.user));
         
+        // Trigger custom event to notify App component of auth change
+        window.dispatchEvent(new Event('auth-changed'));
+        
         toast({
           title: "Welcome!",
           description: data.message,
