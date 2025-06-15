@@ -77,6 +77,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API route to handle content generation requests (30-day workflow only)
   app.post("/api/content-generate", async (req, res) => {
+    let contentRequest: any = null;
+    const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
+    
     try {
       const { industry, selected_topics, userId } = req.body;
       
@@ -87,15 +90,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Content generation requested for industry: ${industry}, user: ${userId}`);
       
       // Create request record in database
-      const contentRequest = await storage.createContentRequest({
+      contentRequest = await storage.createContentRequest({
         userId,
         industry,
         selectedTopics: selected_topics,
         status: "processing"
       });
-
-      // Use 30-day content workflow only
-      const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
 
       // Proxy request to n8n webhook with timeout
       console.log(`Sending request to n8n webhook: ${webhookUrl}`);
@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Provide specific error message for webhook issues
         if (n8nResponse.status === 404) {
-          const webhookName = content_type === 'content-only' ? 'words-only' : 'dashboard-content-request';
+          const webhookName = 'words-only';
           return res.status(500).json({ 
             error: "Webhook not found", 
             details: `The ${webhookName} webhook is not active. Please activate your n8n workflow by clicking 'Execute workflow' in n8n, then try again.`,
@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Google Drive files require authentication, so provide direct access instructions
         console.log('Providing Google Drive download instructions');
         
-        const workflowType = content_type === 'content-only' ? '30-day content' : '5-day AI image content';
+        const workflowType = '30-day content';
         const csvContent = `IMPORTANT: Your ${workflowType} has been generated successfully!
 
 File Details:
@@ -201,11 +201,10 @@ Both your n8n workflows need the same update - add these nodes after creating th
      "filename": "{{$json["name"]}}"
    }
 
-This applies to BOTH workflows:
-- AI Pics workflow: ${content_type === 'ai-pics' ? 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request' : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request'}
-- Content workflow: ${content_type === 'content-only' ? 'https://n8n.srv847085.hstgr.cloud/webhook/words-only' : 'https://n8n.srv847085.hstgr.cloud/webhook/words-only'}
+This applies to the content workflow:
+- Content workflow: https://n8n.srv847085.hstgr.cloud/webhook/words-only
 
-Both need the same Google Drive download fix for direct CSV downloads.`;
+The workflow needs the same Google Drive download fix for direct CSV downloads.`;
         
         csvBase64 = btoa(csvContent);
       } else {
@@ -238,7 +237,7 @@ Both need the same Google Drive download fix for direct CSV downloads.`;
       
       // Update request status to failed if we have a request record
       try {
-        if (contentRequest?.id) {
+        if (contentRequest && contentRequest.id) {
           await storage.updateContentRequest(contentRequest.id, {
             status: "failed",
             errorMessage: `Workflow timeout or error: ${error?.message}`,
@@ -253,7 +252,7 @@ Both need the same Google Drive download fix for direct CSV downloads.`;
       if (error.name === 'AbortError') {
         res.status(500).json({ 
           error: "Workflow timeout", 
-          details: `The ${content_type || 'selected'} workflow is taking longer than expected. Please check your n8n workflow for errors or contact support.`
+          details: `The content generation workflow is taking longer than expected. Please check your n8n workflow for errors or contact support.`
         });
       } else {
         res.status(500).json({ error: "Internal server error", details: error?.message });
@@ -263,12 +262,10 @@ Both need the same Google Drive download fix for direct CSV downloads.`;
 
   // Test webhook connectivity endpoint with detailed diagnostics
   app.post("/api/test-webhook", async (req, res) => {
+    const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
+    
     try {
-      const { webhook_type = 'ai-pics' } = req.body;
-      
-      const webhookUrl = webhook_type === 'content-only' 
-        ? 'https://n8n.srv847085.hstgr.cloud/webhook/words-only'
-        : 'https://n8n.srv847085.hstgr.cloud/webhook/dashboard-content-request';
+      const { webhook_type = 'content-only' } = req.body;
 
       console.log(`Testing webhook: ${webhookUrl}`);
 
