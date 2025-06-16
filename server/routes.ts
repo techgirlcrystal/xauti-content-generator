@@ -1043,35 +1043,52 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
         "XAUTI CRM UNOCK": "unlimited"
       };
 
-      let subscriptionTier = "basic"; // Default to basic for manual sync
-      let generationsLimit = 2; // Default for $3 plan
+      let subscriptionTier = "free"; // Start with free tier
+      let generationsLimit = 0; // Start with no generations
 
-      // Check if specific tags were provided
+      // Check if specific tags were provided - prioritize highest tier found
+      let foundTier = "free";
       if (tags && Array.isArray(tags)) {
         for (const tag of tags) {
           const tagLower = tag.toLowerCase();
+          console.log(`Manual sync checking tag: "${tag}" (lowercase: "${tagLower}")`);
           
-          // Direct mapping first
-          if (planMapping[tag as keyof typeof planMapping]) {
-            subscriptionTier = planMapping[tag as keyof typeof planMapping];
-            break;
+          // Check for unlimited tier first (highest value)
+          if (tagLower.includes('xauti crm business') || 
+              tagLower.includes('business in a box') || 
+              tagLower.includes('$99') || 
+              tagLower.includes('99 plan') || 
+              tagLower.includes('unlimited')) {
+            foundTier = "unlimited";
+            console.log(`Manual sync found UNLIMITED plan tag: ${tag} -> ${foundTier}`);
+            break; // Stop at highest tier
+          }
+          // Check for pro tier
+          else if (tagLower.includes('27') || 
+                   tagLower.includes('xauti 27') ||
+                   tagLower.includes('content tool')) {
+            if (foundTier === "free") foundTier = "pro"; // Only if no higher tier found
+            console.log(`Manual sync found PRO plan tag: ${tag} -> ${foundTier}`);
+          }
+          // Check for basic tier
+          else if (tagLower.includes('$3') || 
+                   tagLower.includes('3 dollar') || 
+                   tagLower.includes('automation')) {
+            if (foundTier === "free") foundTier = "basic"; // Only if no higher tier found
+            console.log(`Manual sync found BASIC plan tag: ${tag} -> ${foundTier}`);
           }
           
-          // Partial matching for variations
-          if (tagLower.includes('xauti crm business') || tagLower.includes('business in a box')) {
-            subscriptionTier = "unlimited";
-            break;
-          } else if (tagLower.includes('27') || tagLower.includes('xauti 27')) {
-            subscriptionTier = "pro";
-            break;
-          } else if (tagLower.includes('$3') || tagLower.includes('3 dollar') || tagLower.includes('automation')) {
-            subscriptionTier = "basic";
-            break;
-          } else if (tagLower.includes('$99') || tagLower.includes('99 plan') || tagLower.includes('unlimited')) {
-            subscriptionTier = "unlimited";
-            break;
+          // Direct mapping check
+          if (planMapping[tag as keyof typeof planMapping]) {
+            const directTier = planMapping[tag as keyof typeof planMapping];
+            if (directTier === "unlimited" || (directTier === "pro" && foundTier !== "unlimited") || (directTier === "basic" && foundTier === "free")) {
+              foundTier = directTier;
+              console.log(`Manual sync found EXACT plan tag: ${tag} -> ${foundTier}`);
+            }
           }
         }
+        subscriptionTier = foundTier;
+        console.log(`Manual sync final subscription tier: ${subscriptionTier}`);
       }
 
       // Set generation limits
