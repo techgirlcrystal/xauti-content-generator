@@ -1289,6 +1289,33 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     res.json({received: true});
   });
 
+  // Get checkout URL for session
+  app.post("/api/get-checkout-url", async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: "Payment processing not configured" });
+    }
+
+    try {
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      // Retrieve the session to get the URL
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (session && session.url) {
+        res.json({ url: session.url });
+      } else {
+        res.status(400).json({ error: "Invalid session or no URL available" });
+      }
+    } catch (error: any) {
+      console.error('Checkout URL error:', error);
+      res.status(500).json({ error: "Failed to get checkout URL" });
+    }
+  });
+
   // Handle successful payment and add generations
   app.post("/api/purchase/confirm", async (req, res) => {
     if (!stripe) {

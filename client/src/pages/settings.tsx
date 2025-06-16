@@ -161,81 +161,35 @@ export default function Settings() {
           return;
         }
         
-        // Reliable Stripe checkout redirect
-        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-        console.log('Stripe public key present:', !!stripePublicKey);
+        // Use server-side Stripe checkout URL
+        console.log('Getting checkout URL from server...');
         
-        if (!stripePublicKey) {
-          toast({
-            title: "Configuration Error",
-            description: "Payment system not properly configured.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Ensure Stripe library is loaded
-        const initializeStripeCheckout = async () => {
-          let stripe = (window as any).Stripe;
-          
-          if (!stripe) {
-            console.log('Loading Stripe library...');
-            await new Promise((resolve) => {
-              const script = document.createElement('script');
-              script.src = 'https://js.stripe.com/v3/';
-              script.onload = resolve;
-              document.head.appendChild(script);
-            });
-            stripe = (window as any).Stripe;
-          }
-
-          if (!stripe) {
-            toast({
-              title: "Payment Error",
-              description: "Unable to load payment system.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          console.log('Creating Stripe instance and redirecting...');
-          const stripeInstance = stripe(stripePublicKey);
-          
-          try {
-            // Force immediate redirect
-            const result = await stripeInstance.redirectToCheckout({
+        try {
+          const checkoutResponse = await fetch("/api/get-checkout-url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
               sessionId: data.sessionId
-            });
-            
-            // Log what happens if redirect doesn't work
-            console.log('Stripe redirect result:', result);
-            
-            if (result && result.error) {
-              console.error('Stripe checkout error:', result.error);
-              toast({
-                title: "Payment Error",
-                description: result.error.message || "Unable to open checkout.",
-                variant: "destructive",
-              });
-            } else {
-              // If we reach here, something prevented the redirect
-              console.error('Stripe redirect failed silently');
-              
-              // Try direct window navigation as fallback
-              const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
-              console.log('Trying direct URL fallback:', checkoutUrl);
-              window.open(checkoutUrl, '_blank');
-            }
-          } catch (err) {
-            console.error('Stripe redirect exception:', err);
-            // Final fallback - open in new tab
-            const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
-            console.log('Exception fallback - opening in new tab:', checkoutUrl);
-            window.open(checkoutUrl, '_blank');
-          }
-        };
+            }),
+          });
 
-        initializeStripeCheckout();
+          if (checkoutResponse.ok) {
+            const checkoutData = await checkoutResponse.json();
+            console.log('Server provided checkout URL:', checkoutData.url);
+            window.location.href = checkoutData.url;
+          } else {
+            // Fallback to direct Stripe checkout
+            console.log('Using direct Stripe checkout...');
+            window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+          }
+        } catch (err) {
+          console.error('Checkout URL error:', err);
+          // Final fallback
+          console.log('Final fallback - direct Stripe URL');
+          window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        }
       } else {
         toast({
           title: "Payment Setup Failed",
@@ -299,81 +253,35 @@ export default function Settings() {
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout for script purchase...');
         
-        // Reliable Stripe checkout redirect for scripts
-        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-        console.log('Script purchase - Stripe public key present:', !!stripePublicKey);
+        // Use server-side Stripe checkout URL for scripts
+        console.log('Getting script checkout URL from server...');
         
-        if (!stripePublicKey) {
-          toast({
-            title: "Configuration Error",
-            description: "Payment system not properly configured.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Ensure Stripe library is loaded
-        const initializeStripeCheckout = async () => {
-          let stripe = (window as any).Stripe;
-          
-          if (!stripe) {
-            console.log('Loading Stripe library for scripts...');
-            await new Promise((resolve) => {
-              const script = document.createElement('script');
-              script.src = 'https://js.stripe.com/v3/';
-              script.onload = resolve;
-              document.head.appendChild(script);
-            });
-            stripe = (window as any).Stripe;
-          }
-
-          if (!stripe) {
-            toast({
-              title: "Payment Error",
-              description: "Unable to load payment system.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          console.log('Creating Stripe instance for scripts and redirecting...');
-          const stripeInstance = stripe(stripePublicKey);
-          
-          try {
-            // Force immediate redirect for scripts
-            const result = await stripeInstance.redirectToCheckout({
+        try {
+          const checkoutResponse = await fetch("/api/get-checkout-url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
               sessionId: data.sessionId
-            });
-            
-            // Log what happens if redirect doesn't work
-            console.log('Stripe script redirect result:', result);
-            
-            if (result && result.error) {
-              console.error('Stripe script checkout error:', result.error);
-              toast({
-                title: "Payment Error",
-                description: result.error.message || "Unable to open checkout.",
-                variant: "destructive",
-              });
-            } else {
-              // If we reach here, something prevented the redirect
-              console.error('Stripe script redirect failed silently');
-              
-              // Try direct window navigation as fallback
-              const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
-              console.log('Trying script direct URL fallback:', checkoutUrl);
-              window.open(checkoutUrl, '_blank');
-            }
-          } catch (err) {
-            console.error('Stripe script redirect exception:', err);
-            // Final fallback - open in new tab
-            const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
-            console.log('Script exception fallback - opening in new tab:', checkoutUrl);
-            window.open(checkoutUrl, '_blank');
-          }
-        };
+            }),
+          });
 
-        initializeStripeCheckout();
+          if (checkoutResponse.ok) {
+            const checkoutData = await checkoutResponse.json();
+            console.log('Server provided script checkout URL:', checkoutData.url);
+            window.location.href = checkoutData.url;
+          } else {
+            // Fallback to direct Stripe checkout
+            console.log('Using direct Stripe checkout for scripts...');
+            window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+          }
+        } catch (err) {
+          console.error('Script checkout URL error:', err);
+          // Final fallback
+          console.log('Script final fallback - direct Stripe URL');
+          window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        }
       } else {
         toast({
           title: "Payment Setup Failed",
