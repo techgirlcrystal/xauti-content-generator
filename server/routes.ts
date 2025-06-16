@@ -233,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tierLimits = { free: 0, basic: 2, pro: 10, unlimited: 999999 };
         generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
         
-        // Calculate subscription end date - use provided date or default to 30 days
+        // Calculate subscription end date - ensure all paid tiers get renewal dates
         let endDate = null;
         if (subscriptionTier !== "free") {
           if (subscriptionEndDate) {
@@ -244,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             }
           } else {
-            // Default to 30 days from now
+            // Always set renewal date for paid subscriptions - default to 30 days from now
             endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
           }
         }
