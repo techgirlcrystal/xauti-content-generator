@@ -237,6 +237,16 @@ export default function Home() {
                 <p className="text-gray-600">{user.email}</p>
               </div>
             </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/settings")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Settings
+              </Button>
+            </div>
             <div className="flex items-center space-x-6">
               <div className="text-center">
                 <div className="flex items-center space-x-2 mb-1">
@@ -360,6 +370,36 @@ export default function Home() {
                  "Generate 30-Day Content"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Generation Usage Information */}
+        <Card className="mt-6 bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-3">How Generations Work</h3>
+            <div className="space-y-2 text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                <p><strong>Content Generation:</strong> Creating your 30-day content calendar uses 1 generation</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                <p><strong>Script Generation:</strong> Creating 30-day video scripts uses 1 generation (Pro+ only)</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                <p><strong>Subscription Tiers:</strong></p>
+              </div>
+              <div className="ml-4 space-y-1 text-xs">
+                <p>• Basic ($3): 2 generations per month</p>
+                <p>• Pro ($27): 10 generations per month + script access</p>
+                <p>• Unlimited ($99+): Unlimited generations + script access</p>
+              </div>
+              <div className="flex items-start gap-2 mt-3">
+                <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                <p><strong>Need More?</strong> Purchase additional generations for $7 each or upgrade your plan</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

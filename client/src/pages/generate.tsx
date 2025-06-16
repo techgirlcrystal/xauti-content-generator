@@ -376,7 +376,8 @@ export default function Generate() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          requestId: generationState.requestId
+          requestId: generationState.requestId,
+          userEmail: currentUser.email
         })
       });
 
@@ -642,53 +643,88 @@ export default function Generate() {
         )}
 
         {/* Scripts Prompt Card */}
-        {generationState.status === 'scripts-prompt' && (
-          <Card className="shadow-sm border-blue-200 bg-blue-50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="flex-shrink-0">
-                  <CheckCircle className="h-8 w-8 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-blue-900">Content Ready!</h3>
-                  <p className="text-sm text-blue-700">
-                    Your 30 days of content is ready. Would you like daily scripts for text-to-speech?
-                  </p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-white p-4 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-gray-900 mb-2">Optional: Generate Daily Scripts</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Get 30 custom scripts (one for each day) that you can easily copy and paste into any text-to-speech generator. Each script is designed to be exactly 30 seconds when read aloud.
-                  </p>
-                  <div className="text-xs text-gray-500">
-                    • Perfect for creating daily audio content
-                    • Ready to use with any text-to-speech tool
-                    • Organized by day in a CSV file for easy access
+        {generationState.status === 'scripts-prompt' && (() => {
+          const currentUser = JSON.parse(localStorage.getItem("xauti_user") || "{}");
+          const tier = currentUser.subscriptionTier || 'free';
+          const hasScriptAccess = tier === 'pro' || tier === 'unlimited';
+          
+          return (
+            <Card className="shadow-sm border-blue-200 bg-blue-50">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-blue-900">Content Ready!</h3>
+                    <p className="text-sm text-blue-700">
+                      Your 30 days of content is ready. {hasScriptAccess ? "Would you like daily scripts for text-to-speech?" : "Script generation requires Pro+ subscription."}
+                    </p>
                   </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={proceedToToneSetup}
-                    className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
-                  >
-                    Yes, Generate Scripts
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={skipScripts}
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                  >
-                    No Thanks, Just Download Content
-                  </Button>
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      {hasScriptAccess ? "Optional: Generate Daily Scripts" : "Script Generation (Pro+ Only)"}
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Get 30 custom scripts (one for each day) that you can easily copy and paste into any text-to-speech generator. Each script is designed to be exactly 30 seconds when read aloud.
+                    </p>
+                    {!hasScriptAccess && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Upgrade to Pro ($27) or Unlimited ($99+)</strong> to unlock script generation with your content.
+                        </p>
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500">
+                      • Perfect for creating daily audio content
+                      • Ready to use with any text-to-speech tool
+                      • Organized by day in a CSV file for easy access
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {hasScriptAccess ? (
+                      <>
+                        <Button
+                          onClick={proceedToToneSetup}
+                          className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
+                        >
+                          Yes, Generate Scripts
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={skipScripts}
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          No Thanks, Just Download Content
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={() => window.open('https://xautimarketingai.com/', '_blank')}
+                          className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
+                        >
+                          Upgrade for Scripts
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={skipScripts}
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          Download Content Only
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Tone Setup Card */}
         {generationState.status === 'tone-setup' && (

@@ -889,10 +889,10 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
-  // Generate daily scripts for text-to-speech with custom tone and CTA
+  // Generate daily scripts for text-to-speech with custom tone and CTA (Pro+ only)
   app.post("/api/generate-scripts", async (req, res) => {
     try {
-      const { requestId, brandTone, callToAction, useDefaultTone } = req.body;
+      const { requestId, brandTone, callToAction, useDefaultTone, userEmail } = req.body;
       
       if (!requestId) {
         return res.status(400).json({ error: "Request ID is required" });
@@ -901,6 +901,19 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       const contentRequest = await storage.getContentRequest(requestId);
       if (!contentRequest) {
         return res.status(404).json({ error: "Content request not found" });
+      }
+
+      // Check if user has Pro+ access for script generation
+      if (userEmail) {
+        const user = await storage.getUserByEmail(userEmail);
+        if (user) {
+          const tier = user.subscriptionTier || 'free';
+          if (tier === 'free' || tier === 'basic') {
+            return res.status(403).json({ 
+              error: "Script generation is only available for Pro ($27) and Unlimited ($99+) subscribers." 
+            });
+          }
+        }
       }
       
       const finalBrandTone = useDefaultTone ? DEFAULT_BRAND_TONE : (brandTone || DEFAULT_BRAND_TONE);
