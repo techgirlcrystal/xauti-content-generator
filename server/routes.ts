@@ -615,12 +615,20 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     console.log('Body keys:', Object.keys(req.body));
     console.log('==================');
     
-    res.json({
+    // Return detailed info about the data structure
+    const response = {
       success: true,
-      receivedData: req.body,
-      bodyKeys: Object.keys(req.body),
-      debug: "Data logged to console"
-    });
+      message: "Webhook received successfully",
+      dataStructure: {
+        bodyKeys: Object.keys(req.body),
+        hasContactObject: !!req.body.contact,
+        hasContactEmail: !!req.body['contact.email'],
+        hasDirectEmail: !!req.body.email,
+        fullBody: req.body
+      }
+    };
+    
+    res.json(response);
   });
 
   // HighLevel webhook for automatic subscription updates
