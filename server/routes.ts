@@ -27,36 +27,43 @@ interface TenantRequest extends Request {
 const tenantMiddleware = async (req: TenantRequest, res: Response, next: NextFunction) => {
   try {
     const host = req.get('host') || '';
+    console.log('Tenant middleware - Host:', host, 'Path:', req.path);
+    
+    // Always skip tenant detection for development environments and admin routes
+    if (req.path.startsWith('/api/admin') || 
+        host.includes('localhost') || 
+        host.includes('replit.dev') ||
+        host.includes('127.0.0.1') ||
+        !host.includes('.')) {
+      console.log('Skipping tenant detection for:', host);
+      return next();
+    }
+    
     const subdomain = host.split('.')[0];
+    console.log('Checking subdomain:', subdomain);
     
-    // Skip tenant detection for admin routes
-    if (req.path.startsWith('/api/admin')) {
-      return next();
-    }
-    
-    // Default to master tenant if no subdomain
-    if (!subdomain || subdomain === 'localhost' || subdomain.includes('replit')) {
-      return next();
-    }
-    
-    // Look up tenant by subdomain
-    const tenant = await storage.getTenantBySubdomain(subdomain);
-    
-    if (!tenant || !tenant.isActive) {
-      return res.status(404).json({ error: 'Tenant not found or inactive' });
-    }
-    
-    req.tenant = tenant;
-    
-    // Initialize tenant-specific API clients
-    if (tenant.stripeSecretKey) {
-      req.tenantStripe = new Stripe(tenant.stripeSecretKey);
-    }
-    
-    if (tenant.openaiApiKey) {
-      req.tenantOpenAI = new OpenAI({
-        apiKey: tenant.openaiApiKey,
-      });
+    // Only look up tenant for production subdomains
+    if (subdomain && host.includes('.') && !host.includes('localhost') && !host.includes('replit')) {
+      const tenant = await storage.getTenantBySubdomain(subdomain);
+      
+      if (!tenant || !tenant.isActive) {
+        console.log('Tenant not found for subdomain:', subdomain);
+        return res.status(404).json({ error: 'Tenant not found or inactive' });
+      }
+      
+      console.log('Found tenant:', tenant.name);
+      req.tenant = tenant;
+      
+      // Initialize tenant-specific API clients
+      if (tenant.stripeSecretKey) {
+        req.tenantStripe = new Stripe(tenant.stripeSecretKey);
+      }
+      
+      if (tenant.openaiApiKey) {
+        req.tenantOpenAI = new OpenAI({
+          apiKey: tenant.openaiApiKey,
+        });
+      }
     }
     
     next();
