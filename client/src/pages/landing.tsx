@@ -13,16 +13,17 @@ export default function Landing() {
   const [subscriptionError, setSubscriptionError] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    email: ""
+    email: "",
+    password: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.email.trim()) {
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please enter both your name and email address.",
+        description: "Please enter your name, email address, and password.",
         variant: "destructive"
       });
       return;
@@ -141,6 +142,18 @@ export default function Landing() {
                   placeholder="your@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({...prev, password: e.target.value}))}
                   disabled={isLoading}
                 />
               </div>

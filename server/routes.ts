@@ -213,7 +213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!user) {
           user = await storage.createUser({
             name: `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown User',
-            email: email
+            email: email,
+            password: 'password123' // Default password for webhook-created users
           });
           console.log('Created new user:', user.email);
         }
@@ -401,11 +402,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.createUser({ 
           name, 
           email,
+          password,
           subscriptionTier: 'free',
           subscriptionStatus: 'inactive',
           generationsLimit: 0,
           tags: []
         });
+      } else {
+        // Verify password for existing user
+        if (user.password !== password) {
+          return res.status(401).json({ 
+            error: "Invalid password. Please check your credentials and try again.",
+            needsAuth: true
+          });
+        }
       }
 
       // CRITICAL: Real-time tag verification and automatic tier assignment
@@ -1110,7 +1120,8 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       if (!user) {
         user = await storage.createUser({
           name: email.split('@')[0],
-          email: email
+          email: email,
+          password: 'password123' // Default password for manual sync users
         });
       }
 
