@@ -693,13 +693,25 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     console.log('Body type:', typeof req.body);
     console.log('Body keys:', Object.keys(req.body || {}));
     console.log('Raw body:', req.body);
+    console.log('Query params:', req.query);
     console.log('================================');
+    
+    // Try to extract email from various possible formats
+    const email = req.body?.email || 
+                  req.body?.['contact.email'] ||
+                  req.body?.contactEmail ||
+                  req.body?.contact?.email ||
+                  req.query?.email ||
+                  'test@example.com'; // fallback for testing
+    
+    console.log('Extracted email:', email);
     
     // Always return success so HighLevel thinks it worked
     res.json({
       success: true,
-      message: "Webhook received and logged",
+      message: "Webhook received and logged successfully",
       receivedData: req.body,
+      extractedEmail: email,
       timestamp: new Date().toISOString()
     });
   });
