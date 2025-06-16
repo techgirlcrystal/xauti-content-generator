@@ -106,6 +106,25 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check generation limits before allowing submission
+    if (!hasGenerationsLeft) {
+      toast({
+        title: "Generation Limit Reached",
+        description: `You've used all ${user?.generationsLimit || 0} generations for this month. Please upgrade your plan to continue.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!hasValidSubscription) {
+      toast({
+        title: "Subscription Required",
+        description: "You need an active subscription to generate content.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!formData.industry.trim()) {
       toast({
         title: "Missing Industry",
@@ -186,11 +205,18 @@ export default function Home() {
                 <div>
                   <strong>Generation Limit Reached:</strong> You've used all {user.generationsLimit} generations for this month.
                 </div>
-                <Button asChild className="bg-red-600 hover:bg-red-700">
-                  <a href="https://xautimarketingai.com/home" target="_blank" rel="noopener noreferrer">
+                <div className="flex gap-2">
+                <Button asChild className="bg-red-600 hover:bg-red-700 flex-1">
+                  <a href="https://xautimarketingai.com/" target="_blank" rel="noopener noreferrer">
                     Upgrade Plan
                   </a>
                 </Button>
+                <Button asChild variant="outline" className="flex-1">
+                  <a href="https://xautimarketingai.com/" target="_blank" rel="noopener noreferrer">
+                    Buy More Generations ($7)
+                  </a>
+                </Button>
+              </div>
               </div>
             </AlertDescription>
           </Alert>
