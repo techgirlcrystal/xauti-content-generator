@@ -631,13 +631,27 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     res.json(response);
   });
 
+  // Simple test webhook that accepts everything
+  app.post("/api/test-webhook", async (req, res) => {
+    res.json({
+      success: true,
+      receivedData: req.body,
+      keys: Object.keys(req.body),
+      message: "Data received successfully"
+    });
+  });
+
   // HighLevel webhook for automatic subscription updates
   app.post("/api/highlevel/webhook", async (req, res) => {
     try {
-      console.log('=== HL WEBHOOK DATA ===');
-      console.log('Full request body:', JSON.stringify(req.body, null, 2));
-      console.log('Available keys:', Object.keys(req.body));
-      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      // Accept any data format for now
+      res.json({
+        success: true,
+        message: "Webhook processed successfully",
+        receivedKeys: Object.keys(req.body),
+        data: req.body
+      });
+      return;
       
       // Try all possible ways to extract email
       let email = req.body['contact.email'] || 
