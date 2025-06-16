@@ -161,12 +161,13 @@ export default function Settings() {
           return;
         }
         
-        // Try using the proper Stripe checkout URL format
-        const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        // Try the standard Stripe checkout URL format
+        const checkoutUrl = `https://checkout.stripe.com/pay/${data.sessionId}`;
         console.log('Attempting redirect to:', checkoutUrl);
         
         // Add a small delay to ensure the page is ready
         setTimeout(() => {
+          console.log('Executing redirect...');
           window.location.href = checkoutUrl;
         }, 100);
       } else {
@@ -232,11 +233,14 @@ export default function Settings() {
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout for script purchase...');
         
-        // Direct window location redirect is more reliable
-        const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        // Use the standard Stripe checkout URL format
+        const checkoutUrl = `https://checkout.stripe.com/pay/${data.sessionId}`;
         console.log('Using script checkout URL:', checkoutUrl);
         
-        window.location.href = checkoutUrl;
+        setTimeout(() => {
+          console.log('Executing script redirect...');
+          window.location.href = checkoutUrl;
+        }, 100);
       } else {
         toast({
           title: "Payment Setup Failed",
