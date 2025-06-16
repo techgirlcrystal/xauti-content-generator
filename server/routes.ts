@@ -433,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         return res.status(403).json({ 
-          error: "No active subscription found. Please upgrade to access the content generator.",
+          error: "Subscription invalid. Please sign up for a new subscription.",
           needsUpgrade: true,
           upgradeUrl: "https://xautimarketingai.com/"
         });

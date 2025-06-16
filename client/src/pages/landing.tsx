@@ -63,18 +63,18 @@ export default function Landing() {
         });
         
         navigate("/home");
-      } else if (data.error === "SUBSCRIPTION_REQUIRED") {
+      } else if (data.needsUpgrade || response.status === 403) {
         // Handle subscription requirement
         setSubscriptionError(true);
         toast({
-          title: "Subscription Required",
-          description: data.message,
+          title: "Access Denied",
+          description: data.error || "Subscription invalid. Please sign up for a new subscription.",
           variant: "destructive"
         });
       } else {
         toast({
           title: "Sign In Failed",
-          description: data.message || "Unable to sign in. Please try again.",
+          description: data.error || data.message || "Unable to sign in. Please try again.",
           variant: "destructive"
         });
       }
