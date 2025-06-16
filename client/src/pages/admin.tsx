@@ -224,7 +224,8 @@ export default function Admin() {
                     placeholder="app.clientbusiness.com"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Client's custom domain. They'll point CNAME to their platform subdomain.
+                    Client's branded domain where their customers will access the platform. 
+                    They configure this in their domain registrar's DNS settings.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -236,7 +237,8 @@ export default function Admin() {
                     placeholder="acme"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Platform URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
+                    Temporary platform URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
+                    <br/>This is what your client uses before setting up their custom domain.
                   </p>
                   {newTenant.domain && newTenant.subdomain && (
                     <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
@@ -307,6 +309,12 @@ export default function Admin() {
                       onChange={(e) => setNewTenant({...newTenant, stripeSecretKey: e.target.value})}
                       placeholder="sk_live_..."
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Get your keys at{" "}
+                      <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        dashboard.stripe.com/apikeys
+                      </a>
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="stripePublicKey">Stripe Public Key</Label>
@@ -326,11 +334,53 @@ export default function Admin() {
                       onChange={(e) => setNewTenant({...newTenant, openaiApiKey: e.target.value})}
                       placeholder="sk-..."
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Get your API key at{" "}
+                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        platform.openai.com/api-keys
+                      </a>
+                    </p>
                   </div>
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex-col space-y-4">
+              {/* Cost Breakdown Section */}
+              <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                <h4 className="font-semibold text-blue-900 mb-2">💰 Monthly Operating Costs (Client's Responsibility)</h4>
+                
+                <div className="space-y-3">
+                  <div>
+                    <strong className="text-blue-800">OpenAI API Costs:</strong>
+                    <ul className="text-blue-700 ml-4 mt-1">
+                      <li>• Content calendar: $0.50-2.00 per generation (~1,000-3,000 tokens)</li>
+                      <li>• Script generation: $0.75-3.00 per generation (~1,500-4,000 tokens)</li>
+                      <li>• Brand tone analysis: $0.25-1.00 per analysis (~500-1,500 tokens)</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <strong className="text-blue-800">What are tokens?</strong>
+                    <p className="text-blue-700 ml-4">Think of tokens like "words" - about 4 characters each. A 30-day content calendar uses roughly 1,000-3,000 tokens to generate.</p>
+                  </div>
+                  
+                  <div>
+                    <strong className="text-blue-800">Monthly Estimates:</strong>
+                    <ul className="text-blue-700 ml-4 mt-1">
+                      <li>• 10 clients × 3 generations = $15-60/month in OpenAI costs</li>
+                      <li>• 25 clients × 5 generations = $60-250/month in OpenAI costs</li>
+                      <li>• n8n workflow platform: $19-39/month</li>
+                      <li>• Stripe processing: 2.9% + $0.30 per transaction</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-green-100 p-2 rounded border-green-300 border">
+                    <strong className="text-green-800">Profit Example:</strong>
+                    <p className="text-green-700">25 clients at $100/month = $2,500 revenue - $150 costs = $2,350 profit (94% margin)</p>
+                  </div>
+                </div>
+              </div>
+
               <Button 
                 onClick={handleCreateTenant}
                 disabled={createTenantMutation.isPending}
