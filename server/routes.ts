@@ -634,21 +634,45 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
   // HighLevel webhook for automatic subscription updates
   app.post("/api/highlevel/webhook", async (req, res) => {
     try {
-      console.log('HighLevel webhook received:', JSON.stringify(req.body, null, 2));
+      console.log('=== HL WEBHOOK DATA ===');
+      console.log('Full request body:', JSON.stringify(req.body, null, 2));
+      console.log('Available keys:', Object.keys(req.body));
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
       
-      // Extract data from HighLevel's flattened structure
-      const email = req.body['contact.email'];
-      const firstName = req.body['contact.firstName'] || req.body['contact.first_name'];
-      const lastName = req.body['contact.lastName'] || req.body['contact.last_name']; 
-      const tags = req.body['contact.tags'];
+      // Try all possible ways to extract email
+      let email = req.body['contact.email'] || 
+                  req.body.email || 
+                  req.body.contactEmail ||
+                  (req.body.contact && req.body.contact.email);
+      
+      let firstName = req.body['contact.firstName'] || 
+                      req.body['contact.first_name'] || 
+                      req.body.firstName ||
+                      req.body.first_name ||
+                      (req.body.contact && req.body.contact.firstName);
+      
+      let lastName = req.body['contact.lastName'] || 
+                     req.body['contact.last_name'] || 
+                     req.body.lastName ||
+                     req.body.last_name ||
+                     (req.body.contact && req.body.contact.lastName);
+      
+      let tags = req.body['contact.tags'] || 
+                 req.body.tags ||
+                 (req.body.contact && req.body.contact.tags);
+      
+      console.log('Extracted data:', { email, firstName, lastName, tags });
       
       if (!email) {
-        console.log('No email found in webhook data. Available keys:', Object.keys(req.body));
+        console.log('❌ No email found in any expected field');
         return res.status(400).json({ 
           error: "Contact email is required",
-          receivedKeys: Object.keys(req.body)
+          receivedKeys: Object.keys(req.body),
+          fullData: req.body
         });
       }
+      
+      console.log('✅ Email found:', email);
 
       // Map HighLevel plan names to subscription tiers
       const planMapping = {
