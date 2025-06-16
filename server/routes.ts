@@ -151,6 +151,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).send("GET endpoint working - HighLevel can reach this");
   });
 
+  // Super simple test endpoint for immediate verification
+  app.get("/api/simple-test", (req, res) => {
+    console.log('Simple test endpoint hit');
+    res.status(200).json({ status: "working", timestamp: new Date().toISOString() });
+  });
+
 
   
   // Authentication routes
@@ -601,32 +607,26 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
 
 
   // Simple webhook that accepts everything - for HighLevel debugging
-  app.post("/api/highlevel/webhook", (req, res) => {
-    console.log('=== HIGHLEVEL WEBHOOK RECEIVED ===');
+  app.all("/api/highlevel/webhook", (req, res) => {
+    console.log(`=== HIGHLEVEL WEBHOOK ${req.method} RECEIVED ===`);
+    console.log('URL:', req.url);
+    console.log('Path:', req.path);
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
     console.log('Body:', JSON.stringify(req.body, null, 2));
     console.log('Body type:', typeof req.body);
     console.log('Body keys:', Object.keys(req.body || {}));
     console.log('Raw body:', req.body);
     console.log('Query params:', req.query);
-    console.log('================================');
+    console.log('================================================');
     
-    // Try to extract email from various possible formats
-    const email = req.body?.email || 
-                  req.body?.['contact.email'] ||
-                  req.body?.contactEmail ||
-                  req.body?.contact?.email ||
-                  req.query?.email ||
-                  'test@example.com'; // fallback for testing
-    
-    console.log('Extracted email:', email);
-    
-    // Always return success so HighLevel thinks it worked
-    res.json({
+    // Always return success regardless of data format
+    res.status(200).json({
       success: true,
-      message: "Webhook received and logged successfully",
+      message: "HighLevel webhook processed successfully",
+      method: req.method,
+      path: req.path,
       receivedData: req.body,
-      extractedEmail: email,
+      queryParams: req.query,
       timestamp: new Date().toISOString()
     });
   });
