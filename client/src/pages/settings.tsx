@@ -201,17 +201,37 @@ export default function Settings() {
           console.log('Creating Stripe instance and redirecting...');
           const stripeInstance = stripe(stripePublicKey);
           
-          const { error } = await stripeInstance.redirectToCheckout({
-            sessionId: data.sessionId
-          });
-
-          if (error) {
-            console.error('Stripe checkout error:', error);
-            toast({
-              title: "Payment Error",
-              description: error.message || "Unable to open checkout.",
-              variant: "destructive",
+          try {
+            // Force immediate redirect
+            const result = await stripeInstance.redirectToCheckout({
+              sessionId: data.sessionId
             });
+            
+            // Log what happens if redirect doesn't work
+            console.log('Stripe redirect result:', result);
+            
+            if (result && result.error) {
+              console.error('Stripe checkout error:', result.error);
+              toast({
+                title: "Payment Error",
+                description: result.error.message || "Unable to open checkout.",
+                variant: "destructive",
+              });
+            } else {
+              // If we reach here, something prevented the redirect
+              console.error('Stripe redirect failed silently');
+              
+              // Try direct window navigation as fallback
+              const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+              console.log('Trying direct URL fallback:', checkoutUrl);
+              window.open(checkoutUrl, '_blank');
+            }
+          } catch (err) {
+            console.error('Stripe redirect exception:', err);
+            // Final fallback - open in new tab
+            const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+            console.log('Exception fallback - opening in new tab:', checkoutUrl);
+            window.open(checkoutUrl, '_blank');
           }
         };
 
@@ -319,17 +339,37 @@ export default function Settings() {
           console.log('Creating Stripe instance for scripts and redirecting...');
           const stripeInstance = stripe(stripePublicKey);
           
-          const { error } = await stripeInstance.redirectToCheckout({
-            sessionId: data.sessionId
-          });
-
-          if (error) {
-            console.error('Stripe script checkout error:', error);
-            toast({
-              title: "Payment Error",
-              description: error.message || "Unable to open checkout.",
-              variant: "destructive",
+          try {
+            // Force immediate redirect for scripts
+            const result = await stripeInstance.redirectToCheckout({
+              sessionId: data.sessionId
             });
+            
+            // Log what happens if redirect doesn't work
+            console.log('Stripe script redirect result:', result);
+            
+            if (result && result.error) {
+              console.error('Stripe script checkout error:', result.error);
+              toast({
+                title: "Payment Error",
+                description: result.error.message || "Unable to open checkout.",
+                variant: "destructive",
+              });
+            } else {
+              // If we reach here, something prevented the redirect
+              console.error('Stripe script redirect failed silently');
+              
+              // Try direct window navigation as fallback
+              const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+              console.log('Trying script direct URL fallback:', checkoutUrl);
+              window.open(checkoutUrl, '_blank');
+            }
+          } catch (err) {
+            console.error('Stripe script redirect exception:', err);
+            // Final fallback - open in new tab
+            const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+            console.log('Script exception fallback - opening in new tab:', checkoutUrl);
+            window.open(checkoutUrl, '_blank');
           }
         };
 
