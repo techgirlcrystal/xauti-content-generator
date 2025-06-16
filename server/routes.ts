@@ -607,6 +607,22 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
+  // Debug endpoint to see raw webhook data
+  app.post("/api/webhook-debug", async (req, res) => {
+    console.log('=== WEBHOOK DEBUG ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('==================');
+    
+    res.json({
+      success: true,
+      receivedData: req.body,
+      bodyKeys: Object.keys(req.body),
+      debug: "Data logged to console"
+    });
+  });
+
   // HighLevel webhook for automatic subscription updates
   app.post("/api/highlevel/webhook", async (req, res) => {
     try {
