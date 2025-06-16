@@ -161,15 +161,33 @@ export default function Settings() {
           return;
         }
         
-        // Try the standard Stripe checkout URL format
-        const checkoutUrl = `https://checkout.stripe.com/pay/${data.sessionId}`;
-        console.log('Attempting redirect to:', checkoutUrl);
+        // Use Stripe's official redirect method
+        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+        console.log('Initializing Stripe redirect...');
         
-        // Add a small delay to ensure the page is ready
-        setTimeout(() => {
-          console.log('Executing redirect...');
-          window.location.href = checkoutUrl;
-        }, 100);
+        if (!(window as any).Stripe) {
+          // Load Stripe if not available
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.onload = () => {
+            const stripe = (window as any).Stripe(stripePublicKey);
+            stripe.redirectToCheckout({ sessionId: data.sessionId });
+          };
+          document.head.appendChild(script);
+        } else {
+          const stripe = (window as any).Stripe(stripePublicKey);
+          console.log('Stripe instance created, redirecting...');
+          stripe.redirectToCheckout({ sessionId: data.sessionId }).then((result: any) => {
+            if (result.error) {
+              console.error('Stripe redirect error:', result.error);
+              toast({
+                title: "Payment Error",
+                description: result.error.message,
+                variant: "destructive",
+              });
+            }
+          });
+        }
       } else {
         toast({
           title: "Payment Setup Failed",
@@ -233,14 +251,32 @@ export default function Settings() {
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout for script purchase...');
         
-        // Use the standard Stripe checkout URL format
-        const checkoutUrl = `https://checkout.stripe.com/pay/${data.sessionId}`;
-        console.log('Using script checkout URL:', checkoutUrl);
+        // Use Stripe's official redirect method for scripts
+        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+        console.log('Initializing Stripe redirect for scripts...');
         
-        setTimeout(() => {
-          console.log('Executing script redirect...');
-          window.location.href = checkoutUrl;
-        }, 100);
+        if (!(window as any).Stripe) {
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.onload = () => {
+            const stripe = (window as any).Stripe(stripePublicKey);
+            stripe.redirectToCheckout({ sessionId: data.sessionId });
+          };
+          document.head.appendChild(script);
+        } else {
+          const stripe = (window as any).Stripe(stripePublicKey);
+          console.log('Stripe instance created for scripts, redirecting...');
+          stripe.redirectToCheckout({ sessionId: data.sessionId }).then((result: any) => {
+            if (result.error) {
+              console.error('Stripe script redirect error:', result.error);
+              toast({
+                title: "Payment Error",
+                description: result.error.message,
+                variant: "destructive",
+              });
+            }
+          });
+        }
       } else {
         toast({
           title: "Payment Setup Failed",
