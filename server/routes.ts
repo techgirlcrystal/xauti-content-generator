@@ -314,6 +314,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user streak
       user = await storage.updateUserStreak(user.id, newStreak, today);
 
+      // Check if user has valid subscription tags
+      const hasValidSubscription = user.subscriptionTier && 
+        user.subscriptionTier !== 'free' && 
+        user.subscriptionStatus === 'active' && 
+        user.tags && 
+        user.tags.length > 0;
+
+      if (!hasValidSubscription) {
+        return res.status(403).json({
+          success: false,
+          error: "SUBSCRIPTION_REQUIRED",
+          message: "Active subscription required. Please sign up for a plan to access the content generator.",
+          requiresSignup: true
+        });
+      }
+
       // Ensure all subscription fields are present with defaults
       const userWithDefaults = {
         ...user,

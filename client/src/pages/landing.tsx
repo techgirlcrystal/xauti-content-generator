@@ -10,6 +10,7 @@ export default function Landing() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: ""
@@ -62,6 +63,20 @@ export default function Landing() {
         });
         
         navigate("/home");
+      } else if (data.error === "SUBSCRIPTION_REQUIRED") {
+        // Handle subscription requirement
+        setSubscriptionError(true);
+        toast({
+          title: "Subscription Required",
+          description: data.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Sign In Failed",
+          description: data.message || "Unable to sign in. Please try again.",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       toast({
@@ -82,6 +97,20 @@ export default function Landing() {
           <p className="text-xl text-gray-600">Content Generator</p>
           <p className="text-sm text-gray-500 mt-2">Build your 30-day content streak</p>
         </div>
+
+        {subscriptionError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h3 className="text-red-800 font-semibold mb-2">Subscription Required</h3>
+            <p className="text-red-700 text-sm mb-3">
+              You need an active subscription to access the content generator. Please sign up for a plan first.
+            </p>
+            <Button asChild className="bg-red-600 hover:bg-red-700 w-full">
+              <a href="https://xautimarketingai.com/" target="_blank" rel="noopener noreferrer">
+                Get Your Subscription
+              </a>
+            </Button>
+          </div>
+        )}
 
         <Card className="shadow-lg">
           <CardHeader>
