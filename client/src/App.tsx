@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Generate from "@/pages/generate";
 import Settings from "@/pages/settings";
+import History from "@/pages/history";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,7 +31,7 @@ function Router() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Also listen for custom events when localStorage is changed in the same tab
     window.addEventListener('auth-changed', handleStorageChange);
 
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/home" component={Home} />
       <Route path="/generate" component={Generate} />
       <Route path="/settings" component={Settings} />
+      <Route path="/history" component={History} />
       <Route component={NotFound} />
     </Switch>
   );

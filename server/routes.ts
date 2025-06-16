@@ -1465,6 +1465,27 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
+  // Get user's content generation history
+  app.get("/api/user-history/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const contentRequests = await storage.getContentRequestsByUserId(parseInt(userId));
+      
+      // Sort by creation date, newest first
+      const sortedRequests = contentRequests.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      res.json({
+        success: true,
+        contentRequests: sortedRequests
+      });
+    } catch (error: any) {
+      console.error('User history error:', error);
+      res.status(500).json({ error: "Failed to get user history" });
+    }
+  });
+
   // Get user subscription and usage info
   app.get("/api/subscription/status/:userId", async (req, res) => {
     try {

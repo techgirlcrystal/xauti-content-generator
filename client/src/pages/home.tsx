@@ -106,7 +106,7 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Check generation limits before allowing submission
     if (!hasGenerationsLeft) {
       toast({
@@ -125,7 +125,7 @@ export default function Home() {
       });
       return;
     }
-    
+
     if (!formData.industry.trim()) {
       toast({
         title: "Missing Industry",
@@ -157,7 +157,7 @@ export default function Home() {
       topics: allTopics.join(','),
       userId: user?.id?.toString() || '0'
     });
-    
+
     navigate(`/generate?${params.toString()}`);
   };
 
