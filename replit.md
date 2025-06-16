@@ -100,11 +100,11 @@ This is a full-stack web application built for generating content based on user-
 
 - June 16, 2025: Fixed Stripe Checkout Redirect Issue
   - Resolved payment checkout redirection problem preventing users from accessing Stripe payment page
-  - Fixed blank checkout screen issue by using proper Stripe JavaScript SDK redirect method
-  - Added comprehensive error handling and validation for both content and script purchases
-  - Enhanced purchase debugging with detailed console logging and error messages
+  - Fixed "Unable to open payment page" errors by switching from Stripe JavaScript SDK to direct URL redirects
+  - Implemented reliable window.location.href method for checkout redirection
   - Verified session ID generation and Stripe configuration working correctly
   - Both content and script generation purchases now redirect properly to Stripe checkout
+  - Eliminated empty error objects and silent redirect failures
 
 - June 16, 2025: Complete Stripe Integration with Tier-Based Script Pricing
   - Integrated Stripe payment system directly into settings page for generation purchases
