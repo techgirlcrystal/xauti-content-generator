@@ -47,7 +47,15 @@ Congratulations! You now have your own branded content generation platform. This
    ```
    Type: CNAME
    Name: app
-   Value: yourclient.xautiplatform.com
+   Value: [your-client-name].xauti-platform.replit.app
+   TTL: 300
+   ```
+   
+   **Example for client "acme":**
+   ```
+   Type: CNAME
+   Name: app
+   Value: acme.xauti-platform.replit.app
    TTL: 300
    ```
 

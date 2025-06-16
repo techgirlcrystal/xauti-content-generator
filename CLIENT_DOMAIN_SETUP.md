@@ -28,8 +28,17 @@ Create a new DNS record with these settings:
 ```
 Type: CNAME
 Name: app (or content, tools, etc.)
-Value: [your-subdomain].xautiplatform.com
+Value: [your-client-name].xauti-platform.replit.app
 TTL: 300 (5 minutes)
+```
+
+**Example:**
+If your client subdomain is "acme", they point to:
+```
+Type: CNAME
+Name: app
+Value: acme.xauti-platform.replit.app
+TTL: 300
 ```
 
 **For Root Domain (Option 2):**
