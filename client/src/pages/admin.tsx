@@ -216,22 +216,28 @@ export default function Admin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="domain">Domain</Label>
+                  <Label htmlFor="domain">Custom Domain (Optional)</Label>
                   <Input
                     id="domain"
                     value={newTenant.domain}
                     onChange={(e) => setNewTenant({...newTenant, domain: e.target.value})}
-                    placeholder="acme-marketing.com"
+                    placeholder="app.clientbusiness.com"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Client's custom domain. They'll need to point this to your platform.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="subdomain">Subdomain</Label>
+                  <Label htmlFor="subdomain">Platform Subdomain</Label>
                   <Input
                     id="subdomain"
                     value={newTenant.subdomain}
                     onChange={(e) => setNewTenant({...newTenant, subdomain: e.target.value})}
                     placeholder="acme"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Initial subdomain: {newTenant.subdomain || 'client'}.yourplatform.com
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
