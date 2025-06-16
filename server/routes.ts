@@ -136,6 +136,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/basic-test", (req, res) => {
     res.json({ success: true, message: "Basic POST endpoint working", body: req.body });
   });
+
+  // Minimal webhook test - completely open
+  app.all("/api/webhook-minimal", (req, res) => {
+    console.log(`${req.method} /api/webhook-minimal called`);
+    console.log('Body:', req.body);
+    res.status(200).json({ success: true, method: req.method, body: req.body });
+  });
+
+  // Simple GET test for HighLevel
+  app.get("/api/test-get", (req, res) => {
+    console.log('GET /api/test-get called');
+    console.log('Query params:', req.query);
+    res.status(200).send("GET endpoint working - HighLevel can reach this");
+  });
   
   // Authentication routes
   app.post("/api/auth/signin", async (req, res) => {
