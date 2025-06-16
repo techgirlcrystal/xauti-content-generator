@@ -224,9 +224,22 @@ export default function Admin() {
                     placeholder="app.clientbusiness.com"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Client's branded domain where their customers will access the platform. 
-                    They configure this in their domain registrar's DNS settings.
+                    Your client's branded domain where their customers will access the platform.
                   </p>
+                  {newTenant.domain && newTenant.subdomain && (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                      <strong className="text-green-800 text-sm">📋 DNS Setup Instructions for Your Client:</strong>
+                      <div className="mt-2 bg-white p-2 rounded border text-xs font-mono">
+                        <div>Type: <strong>CNAME</strong></div>
+                        <div>Name: <strong>{newTenant.domain.split('.')[0]}</strong></div>
+                        <div>Value: <strong>{newTenant.subdomain}.xauti-platform.replit.app</strong></div>
+                        <div>TTL: <strong>300</strong></div>
+                      </div>
+                      <p className="text-xs text-green-700 mt-2">
+                        Give these exact settings to your client to add in their domain registrar (GoDaddy, Namecheap, etc.)
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="subdomain">Platform Subdomain</Label>
@@ -237,17 +250,9 @@ export default function Admin() {
                     placeholder="acme"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Temporary platform URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
-                    <br/>This is what your client uses before setting up their custom domain.
+                    Temporary URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
+                    <br/>Your client uses this before setting up their custom domain.
                   </p>
-                  {newTenant.domain && newTenant.subdomain && (
-                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
-                      <strong>DNS Setup Instructions for Client:</strong><br/>
-                      <code>Type: CNAME</code><br/>
-                      <code>Name: {newTenant.domain.split('.')[0]}</code><br/>
-                      <code>Value: {newTenant.subdomain}.xauti-platform.replit.app</code>
-                    </div>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
@@ -347,7 +352,7 @@ export default function Admin() {
             <CardFooter className="flex-col space-y-4">
               {/* Cost Breakdown Section */}
               <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                <h4 className="font-semibold text-blue-900 mb-2">💰 Monthly Operating Costs (Client's Responsibility)</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">💰 Monthly Operating Costs (Your Brand Responsibility)</h4>
                 
                 <div className="space-y-3">
                   <div>
@@ -365,18 +370,49 @@ export default function Admin() {
                   </div>
                   
                   <div>
-                    <strong className="text-blue-800">Monthly Estimates:</strong>
+                    <strong className="text-blue-800">Other Monthly Costs:</strong>
                     <ul className="text-blue-700 ml-4 mt-1">
-                      <li>• 10 clients × 3 generations = $15-60/month in OpenAI costs</li>
-                      <li>• 25 clients × 5 generations = $60-250/month in OpenAI costs</li>
                       <li>• n8n workflow platform: $19-39/month</li>
                       <li>• Stripe processing: 2.9% + $0.30 per transaction</li>
                     </ul>
                   </div>
                   
-                  <div className="bg-green-100 p-2 rounded border-green-300 border">
-                    <strong className="text-green-800">Profit Example:</strong>
-                    <p className="text-green-700">25 clients at $100/month = $2,500 revenue - $150 costs = $2,350 profit (94% margin)</p>
+                  <div className="bg-green-100 p-3 rounded border-green-300 border">
+                    <strong className="text-green-800 text-sm">💰 Profit Examples (at $100/month per client):</strong>
+                    <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                      <div>
+                        <div className="font-semibold text-green-700">5 clients: $500 revenue</div>
+                        <div className="text-green-600">- $35 costs = $465 profit (93%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">10 clients: $1,000 revenue</div>
+                        <div className="text-green-600">- $55 costs = $945 profit (95%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">15 clients: $1,500 revenue</div>
+                        <div className="text-green-600">- $75 costs = $1,425 profit (95%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">20 clients: $2,000 revenue</div>
+                        <div className="text-green-600">- $95 costs = $1,905 profit (95%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">25 clients: $2,500 revenue</div>
+                        <div className="text-green-600">- $115 costs = $2,385 profit (95%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">30 clients: $3,000 revenue</div>
+                        <div className="text-green-600">- $135 costs = $2,865 profit (96%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">40 clients: $4,000 revenue</div>
+                        <div className="text-green-600">- $175 costs = $3,825 profit (96%)</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-green-700">50 clients: $5,000 revenue</div>
+                        <div className="text-green-600">- $215 costs = $4,785 profit (96%)</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
