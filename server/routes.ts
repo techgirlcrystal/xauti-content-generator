@@ -137,11 +137,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true, message: "Basic POST endpoint working", body: req.body });
   });
 
-  // Minimal webhook test - completely open
-  app.all("/api/webhook-minimal", (req, res) => {
-    console.log(`${req.method} /api/webhook-minimal called`);
-    console.log('Body:', req.body);
-    res.status(200).json({ success: true, method: req.method, body: req.body });
+  // HighLevel webhook for subscription processing
+  app.all("/api/webhook-minimal", async (req, res) => {
+    try {
+      console.log('=== HIGHLEVEL WEBHOOK DATA ===');
+      console.log('Method:', req.method);
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Body:', JSON.stringify(req.body, null, 2));
+      console.log('Body keys:', Object.keys(req.body || {}));
+      console.log('==============================');
+      
+      // Extract data from HighLevel webhook
+      const body = req.body || {};
+      
+      // Try multiple field variations for email
+      const email = body.email || 
+                    body['contact.email'] || 
+                    body.contactEmail ||
+                    body.contact?.email ||
+                    body.customer?.email;
+                    
+      // Try multiple field variations for name
+      const firstName = body.firstName || 
+                        body['contact.firstName'] || 
+                        body.contact?.firstName ||
+                        body.customer?.firstName;
+                        
+      const lastName = body.lastName || 
+                       body['contact.lastName'] || 
+                       body.contact?.lastName ||
+                       body.customer?.lastName;
+                       
+      // Try multiple field variations for tags
+      const tags = body.tags || 
+                   body['contact.tags'] || 
+                   body.contact?.tags ||
+                   body.customer?.tags ||
+                   [];
+      
+      console.log('Extracted data:');
+      console.log('- Email:', email);
+      console.log('- First Name:', firstName);
+      console.log('- Last Name:', lastName);
+      console.log('- Tags:', tags);
+      
+      if (email) {
+        // Get or create user
+        let user = await storage.getUserByEmail(email);
+        if (!user) {
+          user = await storage.createUser({
+            name: `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown User',
+            email: email
+          });
+          console.log('Created new user:', user.email);
+        }
+        
+        // Map plan tags to subscription tiers
+        const planMapping = {
+          "$3 No Code Tool Automation and Content Creator Access": "basic",
+          "XAUTI 27 CONTENT TOOL": "pro", 
+          "XAUTI CRM BUSINESS IN A BOX": "unlimited",
+          "XAUTI CRM UNOCK": "unlimited"
+        };
+        
+        let subscriptionTier = "free";
+        let generationsLimit = 0;
+        
+        // Check tags for subscription plans
+        if (Array.isArray(tags)) {
+          for (const tag of tags) {
+            if (planMapping[tag as keyof typeof planMapping]) {
+              subscriptionTier = planMapping[tag as keyof typeof planMapping];
+              console.log(`Found plan tag: ${tag} -> ${subscriptionTier}`);
+              break;
+            }
+          }
+        }
+        
+        // Set generation limits
+        const tierLimits = { free: 0, basic: 2, pro: 10, unlimited: 999999 };
+        generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
+        
+        // Update user subscription
+        const updatedUser = await storage.updateUserSubscription(user.id, {
+          subscriptionTier,
+          subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
+          subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          tags: Array.isArray(tags) ? tags : (tags ? [tags] : []),
+          generationsLimit: generationsLimit
+        });
+        
+        console.log(`Updated user ${email} to ${subscriptionTier} tier (${generationsLimit} generations)`);
+        
+        res.json({
+          success: true,
+          message: `User subscription updated to ${subscriptionTier} tier`,
+          user: {
+            email: updatedUser.email,
+            tier: updatedUser.subscriptionTier,
+            limit: updatedUser.generationsLimit
+          }
+        });
+      } else {
+        console.log('No email found in webhook data');
+        res.json({
+          success: true,
+          message: "Webhook received but no email found",
+          receivedData: body
+        });
+      }
+    } catch (error: any) {
+      console.error('Webhook processing error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to process webhook",
+        message: error.message 
+      });
+    }
   });
 
   // Simple GET test for HighLevel
