@@ -651,12 +651,34 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
   app.post("/api/highlevel/webhook", async (req, res) => {
     try {
       console.log('HighLevel webhook received data:', JSON.stringify(req.body, null, 2));
+      console.log('All request keys:', Object.keys(req.body));
+      console.log('Raw values check:');
+      console.log('- contact.email:', req.body['contact.email']);
+      console.log('- email:', req.body.email);
+      console.log('- contact.tags:', req.body['contact.tags']);
+      console.log('- tags:', req.body.tags);
       
-      // Extract email from HighLevel's data structure
-      const email = req.body['contact.email'] || req.body.email;
-      const firstName = req.body['contact.firstName'] || req.body.firstName;
-      const lastName = req.body['contact.lastName'] || req.body.lastName;
-      const tags = req.body['contact.tags'] || req.body.tags;
+      // Extract email from HighLevel's data structure - try all possible variations
+      const email = req.body['contact.email'] || 
+                    req.body.email || 
+                    req.body.contactEmail ||
+                    req.body['contactEmail'] ||
+                    req.body['contact_email'];
+                    
+      const firstName = req.body['contact.firstName'] || 
+                        req.body.firstName || 
+                        req.body['contact.first_name'] ||
+                        req.body['contact_first_name'];
+                        
+      const lastName = req.body['contact.lastName'] || 
+                       req.body.lastName ||
+                       req.body['contact.last_name'] ||
+                       req.body['contact_last_name'];
+                       
+      const tags = req.body['contact.tags'] || 
+                   req.body.tags ||
+                   req.body['contactTags'] ||
+                   req.body['contact_tags'];
       
       if (!email) {
         console.log('No email found. Available keys:', Object.keys(req.body));
