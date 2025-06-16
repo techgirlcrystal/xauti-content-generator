@@ -314,8 +314,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user streak
       user = await storage.updateUserStreak(user.id, newStreak, today);
 
+      // Ensure all subscription fields are present with defaults
+      const userWithDefaults = {
+        ...user,
+        subscriptionTier: user.subscriptionTier || 'free',
+        subscriptionStatus: user.subscriptionStatus || 'inactive',
+        generationsLimit: user.generationsLimit || 0,
+        generationsUsed: user.generationsUsed || 0,
+        tags: user.tags || []
+      };
+
       res.json({ 
-        user,
+        user: userWithDefaults,
         message: `Welcome back! You're on day ${newStreak} of your content streak.`
       });
 

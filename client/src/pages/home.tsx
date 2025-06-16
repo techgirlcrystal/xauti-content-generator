@@ -21,6 +21,11 @@ interface User {
   email: string;
   contentStreak: number;
   lastContentDate: string | null;
+  subscriptionTier: string;
+  subscriptionStatus: string;
+  generationsLimit: number;
+  generationsUsed: number;
+  tags: string[];
 }
 
 const PREDEFINED_TOPICS = [
@@ -140,8 +145,58 @@ export default function Home() {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
+  // Check if user has valid subscription tags
+  const hasValidSubscription = user.subscriptionTier && user.subscriptionTier !== 'free' && 
+    user.subscriptionStatus === 'active' && user.tags && user.tags.length > 0;
+
+  // Check if user has generations remaining
+  const hasGenerationsLeft = user.subscriptionTier === 'unlimited' || 
+    (user.generationsLimit && user.generationsUsed < user.generationsLimit);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      {/* Access control warning for non-subscribers */}
+      {!hasValidSubscription && (
+        <div className="max-w-4xl mx-auto mb-8">
+          <Alert className="border-orange-200 bg-orange-50">
+            <Sparkles className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <strong>Subscription Required:</strong> You need an active subscription to access the content generator.
+                </div>
+                <Button asChild className="bg-orange-600 hover:bg-orange-700">
+                  <a href="https://xautimarketingai.com/home" target="_blank" rel="noopener noreferrer">
+                    Sign Up Here
+                  </a>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Generation limit warning */}
+      {hasValidSubscription && !hasGenerationsLeft && (
+        <div className="max-w-4xl mx-auto mb-8">
+          <Alert className="border-red-200 bg-red-50">
+            <Sparkles className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <strong>Generation Limit Reached:</strong> You've used all {user.generationsLimit} generations for this month.
+                </div>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <a href="https://xautimarketingai.com/home" target="_blank" rel="noopener noreferrer">
+                    Upgrade Plan
+                  </a>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Header with user info and streak */}
       <div className="max-w-4xl mx-auto mb-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
@@ -169,6 +224,17 @@ export default function Home() {
                   <span className="text-lg font-semibold text-gray-900">Day {user.contentStreak || 1}</span>
                 </div>
                 <p className="text-sm text-gray-600">of 30</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Sparkles className="h-5 w-5 text-green-500" />
+                  <span className="text-xl font-bold text-gray-900">
+                    {user.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (user.generationsLimit || 0) - (user.generationsUsed || 0))}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {user.subscriptionTier === 'unlimited' ? 'Unlimited' : 'Left This Month'}
+                </p>
               </div>
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
@@ -245,8 +311,15 @@ export default function Home() {
                 </AlertDescription>
               </Alert>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Generating..." : "Generate 30-Day Content"}
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting || !hasValidSubscription || !hasGenerationsLeft}
+              >
+                {isSubmitting ? "Generating..." : 
+                 !hasValidSubscription ? "Subscription Required" :
+                 !hasGenerationsLeft ? "Generation Limit Reached" :
+                 "Generate 30-Day Content"}
               </Button>
             </form>
           </CardContent>
