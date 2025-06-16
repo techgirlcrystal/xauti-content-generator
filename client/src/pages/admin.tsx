@@ -224,7 +224,7 @@ export default function Admin() {
                     placeholder="app.clientbusiness.com"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Client's custom domain. They'll need to point this to your platform.
+                    Client's custom domain. They'll point CNAME to their platform subdomain.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -238,10 +238,13 @@ export default function Admin() {
                   <p className="text-xs text-muted-foreground">
                     Platform URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
                   </p>
-                  {newTenant.domain && (
-                    <p className="text-xs text-green-600">
-                      Client CNAME: {newTenant.domain} → {newTenant.subdomain || 'client'}.xauti-platform.replit.app
-                    </p>
+                  {newTenant.domain && newTenant.subdomain && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                      <strong>DNS Setup Instructions for Client:</strong><br/>
+                      <code>Type: CNAME</code><br/>
+                      <code>Name: {newTenant.domain.split('.')[0]}</code><br/>
+                      <code>Value: {newTenant.subdomain}.xauti-platform.replit.app</code>
+                    </div>
                   )}
                 </div>
                 <div className="space-y-2">
