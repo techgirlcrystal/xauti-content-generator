@@ -1,10 +1,18 @@
-import { users, contentRequests, generationPurchases, type User, type InsertUser, type ContentRequest, type InsertContentRequest, type GenerationPurchase, type InsertGenerationPurchase } from "@shared/schema";
+import { users, contentRequests, generationPurchases, tenants, type User, type InsertUser, type ContentRequest, type InsertContentRequest, type GenerationPurchase, type InsertGenerationPurchase, type Tenant, type InsertTenant } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
+  // Tenant management
+  createTenant(tenant: InsertTenant): Promise<Tenant>;
+  getTenant(id: number): Promise<Tenant | undefined>;
+  getTenantByDomain(domain: string): Promise<Tenant | undefined>;
+  getTenantBySubdomain(subdomain: string): Promise<Tenant | undefined>;
+  updateTenant(id: number, updates: Partial<Tenant>): Promise<Tenant>;
+  
+  // User management (tenant-aware)
+  getUser(id: number, tenantId?: number): Promise<User | undefined>;
+  getUserByEmail(email: string, tenantId?: number): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStreak(id: number, streak: number, lastDate: string): Promise<User>;
   updateUserSubscription(id: number, subscription: Partial<User>): Promise<User>;
@@ -12,22 +20,72 @@ export interface IStorage {
   incrementUserGenerations(id: number): Promise<User>;
   addGenerationsToUser(id: number, generations: number): Promise<User>;
   checkUserCanGenerate(id: number): Promise<boolean>;
+  
+  // Content requests (tenant-aware)
   createContentRequest(request: InsertContentRequest): Promise<ContentRequest>;
-  getContentRequest(id: number): Promise<ContentRequest | undefined>;
+  getContentRequest(id: number, tenantId?: number): Promise<ContentRequest | undefined>;
   updateContentRequest(id: number, updates: Partial<ContentRequest>): Promise<ContentRequest>;
-  getContentRequestsByUserId(userId: number): Promise<ContentRequest[]>;
+  getContentRequestsByUserId(userId: number, tenantId?: number): Promise<ContentRequest[]>;
+  
+  // Generation purchases (tenant-aware)
   createGenerationPurchase(purchase: InsertGenerationPurchase): Promise<GenerationPurchase>;
-  getGenerationPurchasesByUserId(userId: number): Promise<GenerationPurchase[]>;
+  getGenerationPurchasesByUserId(userId: number, tenantId?: number): Promise<GenerationPurchase[]>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+  // Tenant management methods
+  async createTenant(tenant: InsertTenant): Promise<Tenant> {
+    const [newTenant] = await db
+      .insert(tenants)
+      .values(tenant)
+      .returning();
+    return newTenant;
+  }
+
+  async getTenant(id: number): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
+    return tenant || undefined;
+  }
+
+  async getTenantByDomain(domain: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.domain, domain));
+    return tenant || undefined;
+  }
+
+  async getTenantBySubdomain(subdomain: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain));
+    return tenant || undefined;
+  }
+
+  async updateTenant(id: number, updates: Partial<Tenant>): Promise<Tenant> {
+    const [tenant] = await db
+      .update(tenants)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tenants.id, id))
+      .returning();
+    return tenant;
+  }
+
+  // User management methods (tenant-aware)
+  async getUser(id: number, tenantId?: number): Promise<User | undefined> {
+    let query = db.select().from(users).where(eq(users.id, id));
+    
+    if (tenantId) {
+      query = db.select().from(users).where(and(eq(users.id, id), eq(users.tenantId, tenantId)));
+    }
+    
+    const [user] = await query;
     return user || undefined;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+  async getUserByEmail(email: string, tenantId?: number): Promise<User | undefined> {
+    let query = db.select().from(users).where(eq(users.email, email));
+    
+    if (tenantId) {
+      query = db.select().from(users).where(and(eq(users.email, email), eq(users.tenantId, tenantId)));
+    }
+    
+    const [user] = await query;
     return user || undefined;
   }
 
@@ -59,8 +117,14 @@ export class DatabaseStorage implements IStorage {
     return contentRequest;
   }
 
-  async getContentRequest(id: number): Promise<ContentRequest | undefined> {
-    const [request] = await db.select().from(contentRequests).where(eq(contentRequests.id, id));
+  async getContentRequest(id: number, tenantId?: number): Promise<ContentRequest | undefined> {
+    let query = db.select().from(contentRequests).where(eq(contentRequests.id, id));
+    
+    if (tenantId) {
+      query = db.select().from(contentRequests).where(and(eq(contentRequests.id, id), eq(contentRequests.tenantId, tenantId)));
+    }
+    
+    const [request] = await query;
     return request || undefined;
   }
 
@@ -73,8 +137,14 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async getContentRequestsByUserId(userId: number): Promise<ContentRequest[]> {
-    return await db.select().from(contentRequests).where(eq(contentRequests.userId, userId));
+  async getContentRequestsByUserId(userId: number, tenantId?: number): Promise<ContentRequest[]> {
+    let query = db.select().from(contentRequests).where(eq(contentRequests.userId, userId));
+    
+    if (tenantId) {
+      query = db.select().from(contentRequests).where(and(eq(contentRequests.userId, userId), eq(contentRequests.tenantId, tenantId)));
+    }
+    
+    return await query;
   }
 
   async updateUserSubscription(id: number, subscription: Partial<User>): Promise<User> {
@@ -149,8 +219,14 @@ export class DatabaseStorage implements IStorage {
     return generationPurchase;
   }
 
-  async getGenerationPurchasesByUserId(userId: number): Promise<GenerationPurchase[]> {
-    return await db.select().from(generationPurchases).where(eq(generationPurchases.userId, userId)).orderBy(desc(generationPurchases.createdAt));
+  async getGenerationPurchasesByUserId(userId: number, tenantId?: number): Promise<GenerationPurchase[]> {
+    let query = db.select().from(generationPurchases).where(eq(generationPurchases.userId, userId));
+    
+    if (tenantId) {
+      query = db.select().from(generationPurchases).where(and(eq(generationPurchases.userId, userId), eq(generationPurchases.tenantId, tenantId)));
+    }
+    
+    return await query.orderBy(desc(generationPurchases.createdAt));
   }
 }
 
