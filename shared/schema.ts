@@ -6,7 +6,7 @@ import { relations } from "drizzle-orm";
 export const tenants = pgTable("tenants", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  domain: text("domain").notNull().unique(),
+  domain: text("domain"),
   subdomain: text("subdomain").notNull().unique(),
   ownerId: integer("owner_id").notNull(),
   brandingConfig: jsonb("branding_config"),

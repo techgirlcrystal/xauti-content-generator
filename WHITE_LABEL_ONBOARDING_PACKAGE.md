@@ -126,6 +126,25 @@ Your platform uses YOUR API keys:
 
 ## Client Management Features
 
+### White Label Client Login System:
+Your $199 white label platform operates completely independently with its own user system:
+
+**Client Access Methods:**
+1. **Direct Platform Access**: `https://clientname.xauti-platform.replit.app`
+2. **Custom Domain Access**: `https://app.clientbusiness.com` (after DNS setup)
+
+**User Registration Process:**
+- Your clients' customers register directly on YOUR branded platform
+- No connection to the main Xauti system
+- Your platform creates isolated user accounts
+- Each user gets their own login credentials
+
+**Authentication Flow:**
+- Users visit your client's branded domain
+- They sign up with name/email (no HighLevel integration needed)
+- Complete isolated user management system
+- Your client controls all user data and access
+
 ### User Administration:
 - Create and manage client accounts
 - Set individual generation limits
