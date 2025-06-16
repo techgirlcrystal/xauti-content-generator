@@ -161,33 +161,61 @@ export default function Settings() {
           return;
         }
         
-        // Use Stripe's official redirect method
+        // Reliable Stripe checkout redirect
         const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-        console.log('Initializing Stripe redirect...');
+        console.log('Stripe public key present:', !!stripePublicKey);
         
-        if (!(window as any).Stripe) {
-          // Load Stripe if not available
-          const script = document.createElement('script');
-          script.src = 'https://js.stripe.com/v3/';
-          script.onload = () => {
-            const stripe = (window as any).Stripe(stripePublicKey);
-            stripe.redirectToCheckout({ sessionId: data.sessionId });
-          };
-          document.head.appendChild(script);
-        } else {
-          const stripe = (window as any).Stripe(stripePublicKey);
-          console.log('Stripe instance created, redirecting...');
-          stripe.redirectToCheckout({ sessionId: data.sessionId }).then((result: any) => {
-            if (result.error) {
-              console.error('Stripe redirect error:', result.error);
-              toast({
-                title: "Payment Error",
-                description: result.error.message,
-                variant: "destructive",
-              });
-            }
+        if (!stripePublicKey) {
+          toast({
+            title: "Configuration Error",
+            description: "Payment system not properly configured.",
+            variant: "destructive",
           });
+          return;
         }
+
+        // Ensure Stripe library is loaded
+        const initializeStripeCheckout = async () => {
+          let stripe = (window as any).Stripe;
+          
+          if (!stripe) {
+            console.log('Loading Stripe library...');
+            await new Promise((resolve) => {
+              const script = document.createElement('script');
+              script.src = 'https://js.stripe.com/v3/';
+              script.onload = resolve;
+              document.head.appendChild(script);
+            });
+            stripe = (window as any).Stripe;
+          }
+
+          if (!stripe) {
+            toast({
+              title: "Payment Error",
+              description: "Unable to load payment system.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          console.log('Creating Stripe instance and redirecting...');
+          const stripeInstance = stripe(stripePublicKey);
+          
+          const { error } = await stripeInstance.redirectToCheckout({
+            sessionId: data.sessionId
+          });
+
+          if (error) {
+            console.error('Stripe checkout error:', error);
+            toast({
+              title: "Payment Error",
+              description: error.message || "Unable to open checkout.",
+              variant: "destructive",
+            });
+          }
+        };
+
+        initializeStripeCheckout();
       } else {
         toast({
           title: "Payment Setup Failed",
@@ -251,32 +279,61 @@ export default function Settings() {
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout for script purchase...');
         
-        // Use Stripe's official redirect method for scripts
+        // Reliable Stripe checkout redirect for scripts
         const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-        console.log('Initializing Stripe redirect for scripts...');
+        console.log('Script purchase - Stripe public key present:', !!stripePublicKey);
         
-        if (!(window as any).Stripe) {
-          const script = document.createElement('script');
-          script.src = 'https://js.stripe.com/v3/';
-          script.onload = () => {
-            const stripe = (window as any).Stripe(stripePublicKey);
-            stripe.redirectToCheckout({ sessionId: data.sessionId });
-          };
-          document.head.appendChild(script);
-        } else {
-          const stripe = (window as any).Stripe(stripePublicKey);
-          console.log('Stripe instance created for scripts, redirecting...');
-          stripe.redirectToCheckout({ sessionId: data.sessionId }).then((result: any) => {
-            if (result.error) {
-              console.error('Stripe script redirect error:', result.error);
-              toast({
-                title: "Payment Error",
-                description: result.error.message,
-                variant: "destructive",
-              });
-            }
+        if (!stripePublicKey) {
+          toast({
+            title: "Configuration Error",
+            description: "Payment system not properly configured.",
+            variant: "destructive",
           });
+          return;
         }
+
+        // Ensure Stripe library is loaded
+        const initializeStripeCheckout = async () => {
+          let stripe = (window as any).Stripe;
+          
+          if (!stripe) {
+            console.log('Loading Stripe library for scripts...');
+            await new Promise((resolve) => {
+              const script = document.createElement('script');
+              script.src = 'https://js.stripe.com/v3/';
+              script.onload = resolve;
+              document.head.appendChild(script);
+            });
+            stripe = (window as any).Stripe;
+          }
+
+          if (!stripe) {
+            toast({
+              title: "Payment Error",
+              description: "Unable to load payment system.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          console.log('Creating Stripe instance for scripts and redirecting...');
+          const stripeInstance = stripe(stripePublicKey);
+          
+          const { error } = await stripeInstance.redirectToCheckout({
+            sessionId: data.sessionId
+          });
+
+          if (error) {
+            console.error('Stripe script checkout error:', error);
+            toast({
+              title: "Payment Error",
+              description: error.message || "Unable to open checkout.",
+              variant: "destructive",
+            });
+          }
+        };
+
+        initializeStripeCheckout();
       } else {
         toast({
           title: "Payment Setup Failed",
