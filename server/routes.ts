@@ -151,29 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).send("GET endpoint working - HighLevel can reach this");
   });
 
-  // Catch-all route for HighLevel webhook variations
-  app.all("/api/*", (req, res, next) => {
-    const path = req.path;
-    console.log(`Catch-all: ${req.method} ${path}`);
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
-    console.log('Query:', req.query);
-    
-    // If it's a webhook-like path, handle it
-    if (path.includes('webhook') || path.includes('highlevel')) {
-      return res.json({
-        success: true,
-        message: "Webhook received via catch-all",
-        path: path,
-        method: req.method,
-        body: req.body,
-        query: req.query
-      });
-    }
-    
-    // Otherwise continue to next middleware
-    next();
-  });
+
   
   // Authentication routes
   app.post("/api/auth/signin", async (req, res) => {
