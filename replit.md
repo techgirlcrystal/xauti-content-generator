@@ -105,6 +105,7 @@ This is a full-stack web application built for generating content based on user-
   - Implemented robust fallback system with multiple redirect methods
   - Enhanced debugging with comprehensive console logging throughout checkout process
   - Both content and script generation purchases now use reliable server-provided checkout URLs
+  - Updated checkout flow to open in new tabs, preserving user's current session
 
 - June 16, 2025: Complete Stripe Integration with Tier-Based Script Pricing
   - Integrated Stripe payment system directly into settings page for generation purchases

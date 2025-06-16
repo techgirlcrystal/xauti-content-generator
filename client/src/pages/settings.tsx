@@ -178,17 +178,17 @@ export default function Settings() {
           if (checkoutResponse.ok) {
             const checkoutData = await checkoutResponse.json();
             console.log('Server provided checkout URL:', checkoutData.url);
-            window.location.href = checkoutData.url;
+            window.open(checkoutData.url, '_blank');
           } else {
             // Fallback to direct Stripe checkout
             console.log('Using direct Stripe checkout...');
-            window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+            window.open(`https://checkout.stripe.com/c/pay/${data.sessionId}`, '_blank');
           }
         } catch (err) {
           console.error('Checkout URL error:', err);
           // Final fallback
           console.log('Final fallback - direct Stripe URL');
-          window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+          window.open(`https://checkout.stripe.com/c/pay/${data.sessionId}`, '_blank');
         }
       } else {
         toast({
@@ -270,17 +270,17 @@ export default function Settings() {
           if (checkoutResponse.ok) {
             const checkoutData = await checkoutResponse.json();
             console.log('Server provided script checkout URL:', checkoutData.url);
-            window.location.href = checkoutData.url;
+            window.open(checkoutData.url, '_blank');
           } else {
             // Fallback to direct Stripe checkout
             console.log('Using direct Stripe checkout for scripts...');
-            window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+            window.open(`https://checkout.stripe.com/c/pay/${data.sessionId}`, '_blank');
           }
         } catch (err) {
           console.error('Script checkout URL error:', err);
           // Final fallback
           console.log('Script final fallback - direct Stripe URL');
-          window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+          window.open(`https://checkout.stripe.com/c/pay/${data.sessionId}`, '_blank');
         }
       } else {
         toast({
