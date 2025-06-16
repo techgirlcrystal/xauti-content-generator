@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
@@ -1064,7 +1065,7 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
   });
 
   // Purchase additional generations ($7 per generation)
-  app.post("/api/purchase/generations", async (req, res) => {
+  app.post("/api/purchase-generations", async (req, res) => {
     if (!stripe) {
       return res.status(503).json({ error: "Payment processing not configured" });
     }
@@ -1084,28 +1085,208 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       const amountPerGeneration = 700; // $7.00 in cents
       const totalAmount = amountPerGeneration * generationCount;
 
-      // Create Stripe payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: totalAmount,
-        currency: "usd",
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `${generationCount} Additional Content Generation${generationCount > 1 ? 's' : ''}`,
+                description: 'Extra generations for your monthly content creation limit',
+              },
+              unit_amount: amountPerGeneration,
+            },
+            quantity: generationCount,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${req.headers.origin}/settings?payment=success`,
+        cancel_url: `${req.headers.origin}/settings?payment=cancelled`,
         metadata: {
           userId: userId.toString(),
           generationCount: generationCount.toString(),
-          type: "generation_purchase"
+          type: "content_generation_purchase"
         },
-        description: `${generationCount} additional content generation${generationCount > 1 ? 's' : ''}`
       });
 
       res.json({
         success: true,
-        clientSecret: paymentIntent.client_secret,
+        sessionId: session.id,
         amount: totalAmount,
         generationCount
       });
     } catch (error: any) {
       console.error('Generation purchase error:', error);
-      res.status(500).json({ error: "Failed to create payment intent" });
+      res.status(500).json({ error: "Failed to create checkout session" });
     }
+  });
+
+  // Purchase script generations with tier-based pricing
+  app.post("/api/purchase-script-generations", async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: "Payment processing not configured" });
+    }
+
+    try {
+      const { userId, scriptCount = 1 } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const tier = user.subscriptionTier || 'free';
+      if (tier === 'free') {
+        return res.status(403).json({ error: "Script generations require at least a Basic subscription" });
+      }
+
+      // Tier-based pricing: $10 for Basic, $7 for Pro+
+      const pricePerScript = tier === 'basic' ? 1000 : 700; // in cents
+      const totalAmount = pricePerScript * scriptCount;
+
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `${scriptCount} Script Generation${scriptCount > 1 ? 's' : ''}`,
+                description: `Video script generations for ${tier} tier user`,
+              },
+              unit_amount: pricePerScript,
+            },
+            quantity: scriptCount,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${req.headers.origin}/settings?payment=success&type=script`,
+        cancel_url: `${req.headers.origin}/settings?payment=cancelled`,
+        metadata: {
+          userId: userId.toString(),
+          scriptCount: scriptCount.toString(),
+          type: "script_generation_purchase",
+          tier: tier
+        },
+      });
+
+      res.json({
+        success: true,
+        sessionId: session.id,
+        amount: totalAmount,
+        scriptCount,
+        pricePerScript: pricePerScript / 100
+      });
+    } catch (error: any) {
+      console.error('Script purchase error:', error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe webhook endpoint to handle payment completions
+  app.post('/api/webhook/stripe', (req, res, next) => {
+    if (req.get('content-type') === 'application/json') {
+      req.setEncoding('utf8');
+      req.rawBody = '';
+      req.on('data', (chunk) => {
+        req.rawBody += chunk;
+      });
+      req.on('end', () => {
+        next();
+      });
+    } else {
+      next();
+    }
+  }, async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: "Stripe not configured" });
+    }
+
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      if (!sig) {
+        return res.status(400).send('Missing stripe signature');
+      }
+      
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret) {
+        console.log('Warning: STRIPE_WEBHOOK_SECRET not configured');
+        return res.status(500).send('Webhook secret not configured');
+      }
+
+      event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, webhookSecret);
+    } catch (err: any) {
+      console.log(`Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as any;
+        
+        try {
+          if (!session.metadata) {
+            console.log('No metadata found in session');
+            break;
+          }
+
+          const userId = parseInt(session.metadata.userId);
+          const purchaseType = session.metadata.type;
+          
+          if (purchaseType === 'content_generation_purchase') {
+            const generationCount = parseInt(session.metadata.generationCount);
+            
+            // Record the purchase
+            await storage.createGenerationPurchase({
+              userId,
+              generationsAdded: generationCount,
+              amountPaid: session.amount_total || 0,
+              stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+              paymentStatus: "completed"
+            });
+
+            // Add generations to user's account
+            await storage.addGenerationsToUser(userId, generationCount);
+            
+            console.log(`Added ${generationCount} content generations to user ${userId}`);
+            
+          } else if (purchaseType === 'script_generation_purchase') {
+            const scriptCount = parseInt(session.metadata.scriptCount);
+            
+            // Record the purchase
+            await storage.createGenerationPurchase({
+              userId,
+              generationsAdded: scriptCount,
+              amountPaid: session.amount_total || 0,
+              stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+              paymentStatus: "completed"
+            });
+
+            // Add script generations to user's account
+            await storage.addGenerationsToUser(userId, scriptCount);
+            
+            console.log(`Added ${scriptCount} script generations to user ${userId}`);
+          }
+          
+        } catch (error) {
+          console.error('Error processing webhook:', error);
+        }
+        break;
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({received: true});
   });
 
   // Handle successful payment and add generations

@@ -129,14 +129,11 @@ export default function Settings() {
 
       const data = await response.json();
       
-      if (data.clientSecret) {
+      if (data.sessionId) {
         const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
         
-        const { error } = await stripe.confirmPayment({
-          clientSecret: data.clientSecret,
-          confirmParams: {
-            return_url: `${window.location.origin}/settings`,
-          },
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: data.sessionId
         });
 
         if (error) {
@@ -145,15 +142,6 @@ export default function Settings() {
             description: error.message,
             variant: "destructive",
           });
-        } else {
-          toast({
-            title: "Payment Successful",
-            description: `Added ${generationCount} generation${generationCount > 1 ? 's' : ''} to your account!`,
-          });
-          
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
         }
       } else {
         toast({
@@ -201,35 +189,24 @@ export default function Settings() {
       const pricePerScript = tier === 'basic' ? 10 : 7;
       const amount = scriptCount * pricePerScript;
       
-      const response = await fetch("/api/create-payment-intent", {
+      const response = await fetch("/api/purchase-script-generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          amount: amount,
-          userEmail: currentUser.email,
-          scriptCount: scriptCount,
-          description: `${scriptCount} script generation${scriptCount > 1 ? 's' : ''} for ${tier} user`,
-          metadata: {
-            userId: currentUser.id,
-            scriptCount: scriptCount,
-            purchaseType: 'script_generations',
-            tier: tier
-          }
+          userId: currentUser.id,
+          scriptCount: scriptCount
         })
       });
 
       const data = await response.json();
       
-      if (data.clientSecret) {
+      if (data.sessionId) {
         const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
         
-        const { error } = await stripe.confirmPayment({
-          clientSecret: data.clientSecret,
-          confirmParams: {
-            return_url: `${window.location.origin}/settings`,
-          },
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: data.sessionId
         });
 
         if (error) {
@@ -238,15 +215,6 @@ export default function Settings() {
             description: error.message,
             variant: "destructive",
           });
-        } else {
-          toast({
-            title: "Payment Successful",
-            description: `Added ${scriptCount} script generation${scriptCount > 1 ? 's' : ''} to your account!`,
-          });
-          
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
         }
       } else {
         toast({
