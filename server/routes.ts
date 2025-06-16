@@ -607,6 +607,80 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
+  // HighLevel webhook for automatic subscription updates
+  app.post("/api/highlevel/webhook", async (req, res) => {
+    try {
+      const { contact, customData } = req.body;
+      
+      if (!contact || !contact.email) {
+        return res.status(400).json({ error: "Contact email is required" });
+      }
+
+      // Map HighLevel plan names to subscription tiers
+      const planMapping = {
+        "$3 No Code Tool Automation and Content Creator Access": "basic",
+        "XAUTI 27 CONTENT TOOL": "pro", 
+        "XAUTI CRM BUSINESS IN A BOX": "unlimited",
+        "XAUTI CRM UNOCK": "unlimited"
+      };
+
+      // Get user by email
+      let user = await storage.getUserByEmail(contact.email);
+      
+      // Create user if doesn't exist
+      if (!user) {
+        user = await storage.createUser({
+          name: contact.firstName + " " + (contact.lastName || ""),
+          email: contact.email
+        });
+      }
+
+      // Determine subscription tier from tags or custom data
+      let subscriptionTier = "free";
+      let generationsLimit = 0;
+
+      // Check tags for plan membership
+      if (contact.tags && Array.isArray(contact.tags)) {
+        for (const tag of contact.tags) {
+          if (planMapping[tag]) {
+            subscriptionTier = planMapping[tag];
+            break;
+          }
+        }
+      }
+
+      // Set generation limits based on tier
+      const tierLimits = {
+        free: 0,
+        basic: 2,
+        pro: 10,
+        unlimited: 999999
+      };
+
+      generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
+
+      // Update user subscription
+      const updatedUser = await storage.updateUserSubscription(user.id, {
+        subscriptionTier,
+        subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
+        subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        tags: contact.tags || [],
+        generationsLimit: generationsLimit
+      });
+
+      console.log(`HighLevel webhook: Updated user ${contact.email} to ${subscriptionTier} tier`);
+
+      res.json({
+        success: true,
+        user: updatedUser,
+        message: `User updated to ${subscriptionTier} tier`
+      });
+    } catch (error: any) {
+      console.error('HighLevel webhook error:', error);
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
   // Subscription management routes
   
   // Update user subscription tier (for HighLevel integration or manual updates)
