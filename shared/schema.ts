@@ -9,15 +9,7 @@ export const tenants = pgTable("tenants", {
   domain: text("domain").notNull().unique(),
   subdomain: text("subdomain").notNull().unique(),
   ownerId: integer("owner_id").notNull(),
-  brandingConfig: jsonb("branding_config").$type<{
-    logo?: string;
-    primaryColor?: string;
-    secondaryColor?: string;
-    companyName?: string;
-    customCss?: string;
-    favicon?: string;
-    emailFromName?: string;
-  }>(),
+  brandingConfig: jsonb("branding_config"),
   n8nWebhookUrl: text("n8n_webhook_url"),
   n8nApiKey: text("n8n_api_key"),
   stripeSecretKey: text("stripe_secret_key"),
