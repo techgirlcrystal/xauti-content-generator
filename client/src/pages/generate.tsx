@@ -351,6 +351,19 @@ export default function Generate() {
   const generateScripts = async () => {
     if (!generationState.requestId) return;
     
+    // Check if user has Pro+ access for script generation
+    const currentUser = JSON.parse(localStorage.getItem("xauti_user") || "{}");
+    const tier = currentUser.subscriptionTier || 'free';
+    
+    if (tier === 'free' || tier === 'basic') {
+      toast({
+        title: "Script Generation Unavailable",
+        description: "Script generation is only available for Pro ($27) and Unlimited ($99+) subscribers. Your content is still available for download.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       setGenerationState(prev => ({
         ...prev,

@@ -8,6 +8,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserStreak(id: number, streak: number, lastDate: string): Promise<User>;
   updateUserSubscription(id: number, subscription: Partial<User>): Promise<User>;
+  updateUserPassword(id: number, password: string): Promise<User>;
   incrementUserGenerations(id: number): Promise<User>;
   addGenerationsToUser(id: number, generations: number): Promise<User>;
   checkUserCanGenerate(id: number): Promise<boolean>;
@@ -80,6 +81,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set(subscription)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserPassword(id: number, password: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ password })
       .where(eq(users.id, id))
       .returning();
     return user;

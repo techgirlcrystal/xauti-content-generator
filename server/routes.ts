@@ -573,6 +573,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change password endpoint
+  app.post("/api/auth/change-password", async (req, res) => {
+    try {
+      const { email, currentPassword, newPassword } = req.body;
+      
+      if (!email || !currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Email, current password, and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "New password must be at least 6 characters long" });
+      }
+
+      // Get user and verify current password
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.password !== currentPassword) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Update password
+      await storage.updateUserPassword(user.id, newPassword);
+
+      res.json({ 
+        success: true,
+        message: "Password updated successfully"
+      });
+    } catch (error: any) {
+      console.log('Change password error:', error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
   // API route to handle content generation requests (30-day workflow only)
   app.post("/api/content-generate", async (req, res) => {
     let contentRequest: any = null;
