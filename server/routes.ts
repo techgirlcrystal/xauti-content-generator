@@ -408,24 +408,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // CRITICAL: Real-time tag verification - revoke access if tags removed
-      const hasValidTags = user.tags && user.tags.length > 0 && 
-        user.tags.some(tag => {
-          const tagLower = tag.toLowerCase();
-          return tagLower.includes('$3') || 
-                 tagLower.includes('$27') || 
-                 tagLower.includes('$99') ||
-                 tagLower.includes('xauti') ||
-                 tagLower.includes('automation') ||
-                 tagLower.includes('business in a box') ||
-                 tagLower.includes('content tool');
-        });
+      // CRITICAL: Real-time tag verification and automatic tier assignment
+      let subscriptionTier = "free";
+      let generationsLimit = 0;
+      let hasValidTags = false;
 
-      // If no valid subscription tags, immediately revoke access
+      if (user.tags && user.tags.length > 0) {
+        // Check each tag and determine the highest subscription tier
+        for (const tag of user.tags) {
+          const tagLower = tag.toLowerCase();
+          
+          // Check for unlimited tier (highest priority)
+          if (tagLower.includes('xauti crm business') || 
+              tagLower.includes('business in a box') || 
+              tagLower.includes('$99') || 
+              tagLower.includes('unlimited')) {
+            subscriptionTier = "unlimited";
+            generationsLimit = 999999;
+            hasValidTags = true;
+            break; // Stop at highest tier
+          }
+          // Check for pro tier
+          else if (tagLower.includes('27') || 
+                   tagLower.includes('content tool') ||
+                   tagLower.includes('xauti 27')) {
+            if (subscriptionTier === "free") {
+              subscriptionTier = "pro";
+              generationsLimit = 10;
+              hasValidTags = true;
+            }
+          }
+          // Check for basic tier
+          else if (tagLower.includes('$3') || 
+                   tagLower.includes('automation') ||
+                   tagLower.includes('3 dollar')) {
+            if (subscriptionTier === "free") {
+              subscriptionTier = "basic";
+              generationsLimit = 2;
+              hasValidTags = true;
+            }
+          }
+        }
+      }
+
+      // If no valid subscription tags found, revoke access
       if (!hasValidTags) {
         console.log(`Access denied for ${email} - no valid subscription tags found. Current tags:`, user.tags);
         
-        // Downgrade user to free tier immediately
+        // Immediately downgrade to free tier
         await storage.updateUserSubscription(user.id, {
           subscriptionTier: "free",
           subscriptionStatus: "inactive",
@@ -437,6 +467,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           needsUpgrade: true,
           upgradeUrl: "https://xautimarketingai.com/"
         });
+      }
+
+      // Auto-update subscription tier if tags changed
+      if (user.subscriptionTier !== subscriptionTier || user.generationsLimit !== generationsLimit) {
+        const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        user = await storage.updateUserSubscription(user.id, {
+          subscriptionTier,
+          subscriptionStatus: "active",
+          subscriptionEndDate: endDate,
+          generationsLimit
+        });
+        console.log(`Auto-updated ${email} from database tier to ${subscriptionTier} based on current tags`);
       }
 
       // Calculate streak
