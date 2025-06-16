@@ -647,103 +647,23 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     });
   });
 
-  // HighLevel webhook for automatic subscription updates
-  app.post("/api/highlevel/webhook", async (req, res) => {
-    try {
-      console.log('HighLevel webhook received data:', JSON.stringify(req.body, null, 2));
-      console.log('All request keys:', Object.keys(req.body));
-      console.log('Raw values check:');
-      console.log('- contact.email:', req.body['contact.email']);
-      console.log('- email:', req.body.email);
-      console.log('- contact.tags:', req.body['contact.tags']);
-      console.log('- tags:', req.body.tags);
-      
-      // Extract email from HighLevel's data structure - try all possible variations
-      const email = req.body['contact.email'] || 
-                    req.body.email || 
-                    req.body.contactEmail ||
-                    req.body['contactEmail'] ||
-                    req.body['contact_email'];
-                    
-      const firstName = req.body['contact.firstName'] || 
-                        req.body.firstName || 
-                        req.body['contact.first_name'] ||
-                        req.body['contact_first_name'];
-                        
-      const lastName = req.body['contact.lastName'] || 
-                       req.body.lastName ||
-                       req.body['contact.last_name'] ||
-                       req.body['contact_last_name'];
-                       
-      const tags = req.body['contact.tags'] || 
-                   req.body.tags ||
-                   req.body['contactTags'] ||
-                   req.body['contact_tags'];
-      
-      if (!email) {
-        console.log('No email found. Available keys:', Object.keys(req.body));
-        return res.status(400).json({ 
-          error: "Contact email is required",
-          receivedData: req.body,
-          availableKeys: Object.keys(req.body)
-        });
-      }
-      
-      // Get or create user
-      let user = await storage.getUserByEmail(email);
-      if (!user) {
-        user = await storage.createUser({
-          name: `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown',
-          email: email
-        });
-      }
-      
-      // Map plan tags to subscription tiers
-      const planMapping = {
-        "$3 No Code Tool Automation and Content Creator Access": "basic",
-        "XAUTI 27 CONTENT TOOL": "pro", 
-        "XAUTI CRM BUSINESS IN A BOX": "unlimited",
-        "XAUTI CRM UNOCK": "unlimited"
-      };
-      
-      let subscriptionTier = "free";
-      let generationsLimit = 0;
-      
-      // Parse tags and find matching plan
-      if (tags) {
-        const tagArray = Array.isArray(tags) ? tags : [tags];
-        for (const tag of tagArray) {
-          if (planMapping[tag as keyof typeof planMapping]) {
-            subscriptionTier = planMapping[tag as keyof typeof planMapping];
-            break;
-          }
-        }
-      }
-      
-      // Set generation limits
-      const tierLimits = { free: 0, basic: 2, pro: 10, unlimited: 999999 };
-      generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
-      
-      // Update user subscription
-      const updatedUser = await storage.updateUserSubscription(user.id, {
-        subscriptionTier,
-        subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
-        subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        tags: Array.isArray(tags) ? tags : [tags],
-        generationsLimit: generationsLimit
-      });
-      
-      console.log(`Updated user ${email} to ${subscriptionTier} tier with ${generationsLimit} generations`);
-      
-      res.json({
-        success: true,
-        message: `User updated to ${subscriptionTier} tier`,
-        user: updatedUser
-      });
-    } catch (error: any) {
-      console.error('HighLevel webhook error:', error);
-      res.status(500).json({ error: "Failed to process webhook" });
-    }
+  // Simple webhook that accepts everything - for HighLevel debugging
+  app.post("/api/highlevel/webhook", (req, res) => {
+    console.log('=== HIGHLEVEL WEBHOOK RECEIVED ===');
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Body type:', typeof req.body);
+    console.log('Body keys:', Object.keys(req.body || {}));
+    console.log('Raw body:', req.body);
+    console.log('================================');
+    
+    // Always return success so HighLevel thinks it worked
+    res.json({
+      success: true,
+      message: "Webhook received and logged",
+      receivedData: req.body,
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Subscription management routes
