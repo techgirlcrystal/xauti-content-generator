@@ -3,10 +3,38 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
-export const users = pgTable("users", {
+export const tenants = pgTable("tenants", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
+  domain: text("domain").notNull().unique(),
+  subdomain: text("subdomain").notNull().unique(),
+  ownerId: integer("owner_id").notNull(),
+  brandingConfig: jsonb("branding_config").$type<{
+    logo?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    companyName?: string;
+    customCss?: string;
+    favicon?: string;
+    emailFromName?: string;
+  }>(),
+  n8nWebhookUrl: text("n8n_webhook_url"),
+  n8nApiKey: text("n8n_api_key"),
+  stripeSecretKey: text("stripe_secret_key"),
+  stripePublicKey: text("stripe_public_key"),
+  stripeWebhookSecret: text("stripe_webhook_secret"),
+  openaiApiKey: text("openai_api_key"),
+  isActive: boolean("is_active").notNull().default(true),
+  plan: text("plan").notNull().default("white_label"), // white_label = $199
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
   password: text("password").default("password123"),
   contentStreak: integer("content_streak").default(0),
   lastContentDate: date("last_content_date"),
@@ -23,6 +51,7 @@ export const users = pgTable("users", {
 
 export const contentRequests = pgTable("content_requests", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id"),
   industry: text("industry").notNull(),
   selectedTopics: jsonb("selected_topics").notNull(),
@@ -39,6 +68,7 @@ export const contentRequests = pgTable("content_requests", {
 
 export const generationPurchases = pgTable("generation_purchases", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").notNull(),
   generationsAdded: integer("generations_added").notNull(),
   amountPaid: integer("amount_paid").notNull(), // in cents
@@ -47,15 +77,33 @@ export const generationPurchases = pgTable("generation_purchases", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const tenantsRelations = relations(tenants, ({ many, one }) => ({
+  users: many(users),
   contentRequests: many(contentRequests),
   generationPurchases: many(generationPurchases),
+  owner: one(users, {
+    fields: [tenants.ownerId],
+    references: [users.id],
+  }),
+}));
+
+export const usersRelations = relations(users, ({ many, one }) => ({
+  contentRequests: many(contentRequests),
+  generationPurchases: many(generationPurchases),
+  tenant: one(tenants, {
+    fields: [users.tenantId],
+    references: [tenants.id],
+  }),
 }));
 
 export const contentRequestsRelations = relations(contentRequests, ({ one }) => ({
   user: one(users, {
     fields: [contentRequests.userId],
     references: [users.id],
+  }),
+  tenant: one(tenants, {
+    fields: [contentRequests.tenantId],
+    references: [tenants.id],
   }),
 }));
 
@@ -64,7 +112,17 @@ export const generationPurchasesRelations = relations(generationPurchases, ({ on
     fields: [generationPurchases.userId],
     references: [users.id],
   }),
+  tenant: one(tenants, {
+    fields: [generationPurchases.tenantId],
+    references: [tenants.id],
+  }),
 }));
+
+export const insertTenantSchema = createInsertSchema(tenants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -76,6 +134,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertContentRequestSchema = createInsertSchema(contentRequests).pick({
+  tenantId: true,
   userId: true,
   industry: true,
   selectedTopics: true,
@@ -87,6 +146,8 @@ export const insertGenerationPurchaseSchema = createInsertSchema(generationPurch
   createdAt: true,
 });
 
+export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type Tenant = typeof tenants.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertContentRequest = z.infer<typeof insertContentRequestSchema>;
