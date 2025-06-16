@@ -132,6 +132,11 @@ async function generateDailyScript(industry: string, topics: string[], day: numb
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Basic test endpoint
+  app.post("/api/basic-test", (req, res) => {
+    res.json({ success: true, message: "Basic POST endpoint working", body: req.body });
+  });
+  
   // Authentication routes
   app.post("/api/auth/signin", async (req, res) => {
     try {
@@ -644,14 +649,72 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
   // HighLevel webhook for automatic subscription updates
   app.post("/api/highlevel/webhook", async (req, res) => {
     try {
-      // Accept any data format for now
+      console.log('HighLevel webhook received data:', JSON.stringify(req.body, null, 2));
+      
+      // Extract email from HighLevel's data structure
+      const email = req.body['contact.email'] || req.body.email;
+      const firstName = req.body['contact.firstName'] || req.body.firstName;
+      const lastName = req.body['contact.lastName'] || req.body.lastName;
+      const tags = req.body['contact.tags'] || req.body.tags;
+      
+      if (!email) {
+        return res.status(400).json({ 
+          error: "Contact email is required",
+          receivedData: req.body 
+        });
+      }
+      
+      // Get or create user
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.createUser({
+          name: `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown',
+          email: email
+        });
+      }
+      
+      // Map plan tags to subscription tiers
+      const planMapping = {
+        "$3 No Code Tool Automation and Content Creator Access": "basic",
+        "XAUTI 27 CONTENT TOOL": "pro", 
+        "XAUTI CRM BUSINESS IN A BOX": "unlimited",
+        "XAUTI CRM UNOCK": "unlimited"
+      };
+      
+      let subscriptionTier = "free";
+      let generationsLimit = 0;
+      
+      // Parse tags and find matching plan
+      if (tags) {
+        const tagArray = Array.isArray(tags) ? tags : [tags];
+        for (const tag of tagArray) {
+          if (planMapping[tag as keyof typeof planMapping]) {
+            subscriptionTier = planMapping[tag as keyof typeof planMapping];
+            break;
+          }
+        }
+      }
+      
+      // Set generation limits
+      const tierLimits = { free: 0, basic: 2, pro: 10, unlimited: 999999 };
+      generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
+      
+      // Update user subscription
+      const updatedUser = await storage.updateUserSubscription(user.id, {
+        subscriptionTier,
+        subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
+        subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        tags: Array.isArray(tags) ? tags : [tags],
+        generationsLimit: generationsLimit
+      });
+      
+      console.log(`Updated user ${email} to ${subscriptionTier} tier with ${generationsLimit} generations`);
+      
       res.json({
         success: true,
-        message: "Webhook processed successfully",
-        receivedKeys: Object.keys(req.body),
-        data: req.body
+        message: `User updated to ${subscriptionTier} tier`,
+        user: updatedUser
       });
-      return;
       
       // Try all possible ways to extract email
       let email = req.body['contact.email'] || 
