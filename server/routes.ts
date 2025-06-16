@@ -384,7 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   
-  // Authentication routes
+  // Authentication routes with real-time access control
   app.post("/api/auth/signin", async (req, res) => {
     try {
       const { name, email } = req.body;
@@ -397,8 +397,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByEmail(email);
       
       if (!user) {
-        // Create new user
-        user = await storage.createUser({ name, email });
+        // Create new user with no access until webhook provides tags
+        user = await storage.createUser({ 
+          name, 
+          email,
+          subscriptionTier: 'free',
+          subscriptionStatus: 'inactive',
+          generationsLimit: 0,
+          tags: []
+        });
+      }
+
+      // CRITICAL: Real-time tag verification - revoke access if tags removed
+      const hasValidTags = user.tags && user.tags.length > 0 && 
+        user.tags.some(tag => {
+          const tagLower = tag.toLowerCase();
+          return tagLower.includes('$3') || 
+                 tagLower.includes('$27') || 
+                 tagLower.includes('$99') ||
+                 tagLower.includes('xauti') ||
+                 tagLower.includes('automation') ||
+                 tagLower.includes('business in a box') ||
+                 tagLower.includes('content tool');
+        });
+
+      // If no valid subscription tags, immediately revoke access
+      if (!hasValidTags) {
+        console.log(`Access denied for ${email} - no valid subscription tags found. Current tags:`, user.tags);
+        
+        // Downgrade user to free tier immediately
+        await storage.updateUserSubscription(user.id, {
+          subscriptionTier: "free",
+          subscriptionStatus: "inactive",
+          generationsLimit: 0
+        });
+        
+        return res.status(403).json({ 
+          error: "No active subscription found. Please upgrade to access the content generator.",
+          needsUpgrade: true,
+          upgradeUrl: "https://xautimarketingai.com/"
+        });
       }
 
       // Calculate streak
