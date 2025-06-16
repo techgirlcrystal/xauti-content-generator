@@ -195,6 +195,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Map plan tags to subscription tiers
         const planMapping = {
           "$3 No Code Tool Automation and Content Creator Access": "basic",
+          "$3 No Code Tool Automation": "basic",
+          "$3 Content Creator Access": "basic",
+          "$3": "basic",
           "XAUTI 27 CONTENT TOOL": "pro", 
           "XAUTI CRM BUSINESS IN A BOX": "unlimited",
           "XAUTI CRM UNOCK": "unlimited"
@@ -898,6 +901,72 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     } catch (error: any) {
       console.error('Payment confirmation error:', error);
       res.status(500).json({ error: "Failed to confirm payment" });
+    }
+  });
+
+  // Manual user sync endpoint for testing
+  app.post("/api/manual-sync", async (req, res) => {
+    try {
+      const { email, tags } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      // Get or create user
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.createUser({
+          name: email.split('@')[0],
+          email: email
+        });
+      }
+
+      // Map plan tags to subscription tiers
+      const planMapping = {
+        "$3 No Code Tool Automation and Content Creator Access": "basic",
+        "$3 No Code Tool Automation": "basic",
+        "$3 Content Creator Access": "basic",
+        "$3": "basic",
+        "XAUTI 27 CONTENT TOOL": "pro", 
+        "XAUTI CRM BUSINESS IN A BOX": "unlimited",
+        "XAUTI CRM UNOCK": "unlimited"
+      };
+
+      let subscriptionTier = "basic"; // Default to basic for manual sync
+      let generationsLimit = 2; // Default for $3 plan
+
+      // Check if specific tags were provided
+      if (tags && Array.isArray(tags)) {
+        for (const tag of tags) {
+          if (planMapping[tag as keyof typeof planMapping]) {
+            subscriptionTier = planMapping[tag as keyof typeof planMapping];
+            break;
+          }
+        }
+      }
+
+      // Set generation limits
+      const tierLimits = { free: 0, basic: 2, pro: 10, unlimited: 999999 };
+      generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 2;
+
+      // Update user subscription
+      const updatedUser = await storage.updateUserSubscription(user.id, {
+        subscriptionTier,
+        subscriptionStatus: "active",
+        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        tags: tags || ["$3"],
+        generationsLimit: generationsLimit
+      });
+
+      res.json({
+        success: true,
+        message: `User ${email} synced with ${subscriptionTier} tier`,
+        user: updatedUser
+      });
+    } catch (error: any) {
+      console.error('Manual sync error:', error);
+      res.status(500).json({ error: "Failed to sync user" });
     }
   });
 
