@@ -208,21 +208,12 @@ export default function Settings() {
       });
 
       const data = await response.json();
+      console.log('Script purchase response:', data);
       
       if (data.sessionId) {
-        const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-        
-        const { error } = await stripe.redirectToCheckout({
-          sessionId: data.sessionId
-        });
-
-        if (error) {
-          toast({
-            title: "Payment Failed",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        console.log('Redirecting to Stripe checkout for script purchase...');
+        // Use direct URL redirect for script purchases too
+        window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
       } else {
         toast({
           title: "Payment Setup Failed",
