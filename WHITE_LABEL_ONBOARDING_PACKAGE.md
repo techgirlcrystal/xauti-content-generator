@@ -219,4 +219,76 @@ Your clients see YOU as the technology provider, not a reseller:
 - Team expansion consideration
 - Additional service offerings
 
+## API Cost Breakdown
+
+Understanding your monthly operational costs for running the white label platform:
+
+### OpenAI API Costs (Your Account)
+**Content Generation:**
+- 30-day calendar: ~$0.50-2.00 per generation
+- Script generation: ~$0.75-3.00 per generation
+- Brand tone analysis: ~$0.25-1.00 per analysis
+
+**Monthly Estimates:**
+- **10 clients, 3 generations each**: $15-60/month
+- **25 clients, 5 generations each**: $60-250/month
+- **50 clients, 10 generations each**: $250-1,000/month
+
+### n8n Workflow Costs (Your Account)
+**Subscription Tiers:**
+- **Starter**: $19/month (5,000 executions)
+- **Pro**: $39/month (10,000 executions)
+- **Enterprise**: Custom pricing for higher volumes
+
+**Usage Estimates:**
+- Each content generation = ~10-20 n8n executions
+- 100 generations/month = ~2,000 executions ($19/month)
+- 500 generations/month = ~10,000 executions ($39/month)
+
+### Stripe Processing Fees (Your Account)
+**Transaction Costs:**
+- **Per transaction**: 2.9% + $0.30
+- **Monthly subscriptions**: Same rate per billing cycle
+- **Subscription management**: No additional fees
+
+**Revenue Examples:**
+- $50 client payment: $1.75 in Stripe fees
+- $100 client payment: $3.20 in Stripe fees
+- $200 client payment: $6.10 in Stripe fees
+
+### Total Monthly Operational Costs
+
+**Small Scale (10 clients, $500 MRR):**
+- OpenAI: $15-60
+- n8n: $19
+- Stripe: $15-25
+- **Total**: $49-104/month
+
+**Medium Scale (25 clients, $2,500 MRR):**
+- OpenAI: $60-250
+- n8n: $19-39
+- Stripe: $75-125
+- **Total**: $154-414/month
+
+**Large Scale (50 clients, $7,500 MRR):**
+- OpenAI: $250-1,000
+- n8n: $39-99
+- Stripe: $225-375
+- **Total**: $514-1,474/month
+
+### Profit Margins
+
+**Your Revenue Retention**: 100% of client payments minus API costs
+
+**Typical Margins:**
+- Small scale: 80-90% profit margin
+- Medium scale: 85-95% profit margin  
+- Large scale: 80-85% profit margin
+
+**Key Benefits:**
+- No platform fees to Xauti (one-time $199 only)
+- Direct client relationships and payments
+- Scalable cost structure
+- High-margin recurring revenue business
+
 Your $199 investment in white label access provides the foundation for a scalable, profitable content generation service business with complete brand control and professional positioning.

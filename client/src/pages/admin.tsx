@@ -236,8 +236,13 @@ export default function Admin() {
                     placeholder="acme"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Initial subdomain: {newTenant.subdomain || 'client'}.yourplatform.com
+                    Platform URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
                   </p>
+                  {newTenant.domain && (
+                    <p className="text-xs text-green-600">
+                      Client CNAME: {newTenant.domain} → {newTenant.subdomain || 'client'}.xauti-platform.replit.app
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
