@@ -24,6 +24,16 @@ export default function Settings() {
 
   const currentUser = JSON.parse(localStorage.getItem("xauti_user") || "{}");
 
+  // Test Stripe configuration on component mount
+  React.useEffect(() => {
+    const stripeKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    console.log('Stripe public key available:', !!stripeKey);
+    console.log('Stripe library loaded:', !!(window as any).Stripe);
+    if (stripeKey && (window as any).Stripe) {
+      console.log('Stripe configuration looks correct');
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -115,6 +125,7 @@ export default function Settings() {
     
     try {
       const generationCount = parseInt(quantity);
+      console.log('Starting purchase for:', generationCount, 'generations');
       
       const response = await fetch("/api/purchase-generations", {
         method: "POST",
@@ -127,7 +138,13 @@ export default function Settings() {
         })
       });
 
+      if (!response.ok) {
+        console.error('Purchase API error:', response.status, response.statusText);
+        throw new Error(`Purchase failed: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Purchase API response:', data);
       
       if (data.sessionId) {
         const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
