@@ -148,12 +148,27 @@ export default function Settings() {
       
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout...');
+        console.log('Session ID format:', data.sessionId);
         
-        // Direct window location redirect is more reliable
+        // Validate session ID format
+        if (!data.sessionId.startsWith('cs_')) {
+          console.error('Invalid session ID format:', data.sessionId);
+          toast({
+            title: "Payment Error",
+            description: "Invalid checkout session. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Try using the proper Stripe checkout URL format
         const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
-        console.log('Using checkout URL:', checkoutUrl);
+        console.log('Attempting redirect to:', checkoutUrl);
         
-        window.location.href = checkoutUrl;
+        // Add a small delay to ensure the page is ready
+        setTimeout(() => {
+          window.location.href = checkoutUrl;
+        }, 100);
       } else {
         toast({
           title: "Payment Setup Failed",
