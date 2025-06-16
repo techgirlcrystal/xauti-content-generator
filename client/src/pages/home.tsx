@@ -237,16 +237,6 @@ export default function Home() {
                 <p className="text-gray-600">{user.email}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/settings")}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Settings
-              </Button>
-            </div>
             <div className="flex items-center space-x-6">
               <div className="text-center">
                 <div className="flex items-center space-x-2 mb-1">
@@ -284,6 +274,13 @@ export default function Home() {
                   <p className="text-sm text-gray-600">Plan Renews</p>
                 </div>
               )}
+              <Button
+                variant="outline"
+                onClick={() => navigate("/settings")}
+                className="mr-3"
+              >
+                Settings
+              </Button>
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

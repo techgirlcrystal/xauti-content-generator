@@ -98,6 +98,18 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 16, 2025: Password Management and Script Generation Access Control
+  - Added comprehensive password change functionality with secure backend validation
+  - Created dedicated settings page accessible via user dashboard navigation
+  - Implemented script generation access control - restricted to Pro ($27) and Unlimited ($99+) users only
+  - Added tier-based UI visibility for script generation prompts with upgrade messaging
+  - Enhanced generation usage information on home page explaining how content and script generations work
+  - Updated backend API with Pro+ validation for script generation endpoints
+  - Added clear subscription tier benefits explanation (Basic: content only, Pro+: content + scripts)
+  - Users can now securely change passwords with current password verification
+  - Script generation properly counts as 1 generation toward monthly limits
+  - Provided intuitive upgrade paths for Basic users wanting script access
+
 - June 16, 2025: Complete Access Control and Generation Management System
   - Implemented strict subscription enforcement at login level - users without active tags cannot access the app
   - Added prominent signup links (https://xautimarketingai.com/) throughout login and upgrade flows
