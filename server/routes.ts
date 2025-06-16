@@ -1,9 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import Stripe from "stripe";
+import { insertTenantSchema } from "@shared/schema";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -15,6 +16,55 @@ let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 }
+
+// Tenant middleware to detect and set tenant context
+interface TenantRequest extends Request {
+  tenant?: any;
+  tenantStripe?: Stripe;
+  tenantOpenAI?: OpenAI;
+}
+
+const tenantMiddleware = async (req: TenantRequest, res: Response, next: NextFunction) => {
+  try {
+    const host = req.get('host') || '';
+    const subdomain = host.split('.')[0];
+    
+    // Skip tenant detection for admin routes
+    if (req.path.startsWith('/api/admin')) {
+      return next();
+    }
+    
+    // Default to master tenant if no subdomain
+    if (!subdomain || subdomain === 'localhost' || subdomain.includes('replit')) {
+      return next();
+    }
+    
+    // Look up tenant by subdomain
+    const tenant = await storage.getTenantBySubdomain(subdomain);
+    
+    if (!tenant || !tenant.isActive) {
+      return res.status(404).json({ error: 'Tenant not found or inactive' });
+    }
+    
+    req.tenant = tenant;
+    
+    // Initialize tenant-specific API clients
+    if (tenant.stripeSecretKey) {
+      req.tenantStripe = new Stripe(tenant.stripeSecretKey);
+    }
+    
+    if (tenant.openaiApiKey) {
+      req.tenantOpenAI = new OpenAI({
+        apiKey: tenant.openaiApiKey,
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Tenant middleware error:', error);
+    next();
+  }
+};
 
 // Default brand tone (yours)
 const DEFAULT_BRAND_TONE = `Warm, encouraging, and empowering. I speak with authentic care and genuine heart for helping others succeed. My voice is supportive yet confident, using "you" to connect directly with my audience. I balance inspiration with practical action steps, always believing in people's potential while providing clear guidance. I use inclusive language that makes everyone feel welcomed and valued.`;
@@ -133,6 +183,30 @@ async function generateDailyScript(industry: string, topics: string[], day: numb
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Apply tenant middleware to all routes
+  app.use(tenantMiddleware);
+  
+  // Admin routes for managing white label clients
+  app.get("/api/admin/tenants", async (req, res) => {
+    try {
+      // Only allow master tenant admin access
+      const tenants = await storage.getTenant(1); // Implement getAllTenants method
+      res.json([]);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tenants" });
+    }
+  });
+
+  app.post("/api/admin/tenants", async (req, res) => {
+    try {
+      const validatedData = insertTenantSchema.parse(req.body);
+      const tenant = await storage.createTenant(validatedData);
+      res.json(tenant);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create tenant" });
+    }
+  });
+
   // Basic test endpoint
   app.post("/api/basic-test", (req, res) => {
     res.json({ success: true, message: "Basic POST endpoint working", body: req.body });
@@ -227,7 +301,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "$3 Content Creator Access": "basic",
           "$3": "basic",
           "XAUTI 27 CONTENT TOOL": "pro", 
-          "XAUTI CRM BUSINESS IN A BOX": "unlimited",
+          "XAUTI CRM BUSINESS IN A BOX": "white_label",
+          "business in a box": "white_label",
+          "Business in a Box": "white_label",
+          "BUSINESS IN A BOX": "white_label",
+          "xauti crm 99 plan": "unlimited",
+          "XAUTI CRM 99 PLAN": "unlimited",
+          "Xauti CRM 99 Plan": "unlimited",
           "XAUTI CRM UNOCK": "unlimited",
           "$99 Plan Purchased": "unlimited",
           "$99": "unlimited",
@@ -240,33 +320,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check tags for subscription plans - prioritize highest tier found
         let foundTier = "free";
+        let hasWhiteLabelAccess = false;
+        
         if (Array.isArray(tags)) {
           for (const tag of tags) {
             const tagLower = tag.toLowerCase();
             console.log(`Checking tag: "${tag}" (lowercase: "${tagLower}")`);
             
-            // Check for unlimited tier first (highest value)
-            if (tagLower.includes('xauti crm business') || 
-                tagLower.includes('business in a box') || 
+            // Check for white label access (business in a box)
+            if (tagLower.includes('business in a box') || 
+                tagLower.includes('business in the box')) {
+              hasWhiteLabelAccess = true;
+              console.log(`Found WHITE LABEL access tag: ${tag}`);
+            }
+            
+            // Check for unlimited tier (xauti crm 99 plan)
+            if (tagLower.includes('xauti crm 99') || 
+                tagLower.includes('xauti crm 99 plan') ||
                 tagLower.includes('$99') || 
                 tagLower.includes('99 plan') || 
                 tagLower.includes('unlimited')) {
               foundTier = "unlimited";
               console.log(`Found UNLIMITED plan tag: ${tag} -> ${foundTier}`);
-              break; // Stop at highest tier
             }
             // Check for pro tier
             else if (tagLower.includes('27') || 
                      tagLower.includes('xauti 27') ||
                      tagLower.includes('content tool')) {
-              if (foundTier === "free") foundTier = "pro"; // Only if no higher tier found
+              if (foundTier === "free" || foundTier === "basic") foundTier = "pro";
               console.log(`Found PRO plan tag: ${tag} -> ${foundTier}`);
             }
             // Check for basic tier
             else if (tagLower.includes('$3') || 
                      tagLower.includes('3 dollar') || 
                      tagLower.includes('automation')) {
-              if (foundTier === "free") foundTier = "basic"; // Only if no higher tier found
+              if (foundTier === "free") foundTier = "basic";
               console.log(`Found BASIC plan tag: ${tag} -> ${foundTier}`);
             }
             
@@ -312,15 +400,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           generationsLimit: generationsLimit
         });
         
-        console.log(`Updated user ${email} to ${subscriptionTier} tier (${generationsLimit} generations)`);
+        console.log(`Updated user ${email}:`);
+        console.log(`- Subscription tier: ${subscriptionTier} (${generationsLimit} generations)`);
+        console.log(`- White label access: ${hasWhiteLabelAccess ? 'YES' : 'NO'}`);
+        console.log(`- Tags processed: ${Array.isArray(tags) ? tags.join(', ') : 'none'}`);
         
         res.json({
           success: true,
-          message: `User subscription updated to ${subscriptionTier} tier`,
+          message: `User updated - Tier: ${subscriptionTier}, White Label: ${hasWhiteLabelAccess}`,
           user: {
             email: updatedUser.email,
             tier: updatedUser.subscriptionTier,
-            limit: updatedUser.generationsLimit
+            limit: updatedUser.generationsLimit,
+            whiteLabelAccess: hasWhiteLabelAccess,
+            tags: Array.isArray(tags) ? tags : []
           }
         });
       } else {

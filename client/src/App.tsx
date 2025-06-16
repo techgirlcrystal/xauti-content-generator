@@ -9,6 +9,7 @@ import Home from "@/pages/home";
 import Generate from "@/pages/generate";
 import Settings from "@/pages/settings";
 import History from "@/pages/history";
+import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/generate" component={Generate} />
       <Route path="/settings" component={Settings} />
       <Route path="/history" component={History} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );
