@@ -610,9 +610,28 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
   // HighLevel webhook for automatic subscription updates
   app.post("/api/highlevel/webhook", async (req, res) => {
     try {
-      const { contact, customData } = req.body;
+      console.log('HighLevel webhook received:', JSON.stringify(req.body, null, 2));
       
-      if (!contact || !contact.email) {
+      // Handle both nested and flattened data structures
+      let email, firstName, lastName, tags;
+      
+      if (req.body.contact && req.body.contact.email) {
+        // Nested structure
+        email = req.body.contact.email;
+        firstName = req.body.contact.firstName;
+        lastName = req.body.contact.lastName;
+        tags = req.body.contact.tags;
+      } else if (req.body['contact.email']) {
+        // Flattened structure from HighLevel
+        email = req.body['contact.email'];
+        firstName = req.body['contact.firstName'];
+        lastName = req.body['contact.lastName'];
+        tags = req.body['contact.tags'];
+      } else {
+        return res.status(400).json({ error: "Contact email is required" });
+      }
+      
+      if (!email) {
         return res.status(400).json({ error: "Contact email is required" });
       }
 
@@ -625,27 +644,36 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       };
 
       // Get user by email
-      let user = await storage.getUserByEmail(contact.email);
+      let user = await storage.getUserByEmail(email);
       
       // Create user if doesn't exist
       if (!user) {
         user = await storage.createUser({
-          name: contact.firstName + " " + (contact.lastName || ""),
-          email: contact.email
+          name: (firstName || "") + " " + (lastName || ""),
+          email: email
         });
       }
 
-      // Determine subscription tier from tags or custom data
+      // Determine subscription tier from tags
       let subscriptionTier = "free";
       let generationsLimit = 0;
 
+      // Parse tags - could be string or array
+      let tagArray: string[] = [];
+      if (tags) {
+        if (Array.isArray(tags)) {
+          tagArray = tags;
+        } else if (typeof tags === 'string') {
+          // Handle comma-separated string
+          tagArray = tags.split(',').map(tag => tag.trim());
+        }
+      }
+
       // Check tags for plan membership
-      if (contact.tags && Array.isArray(contact.tags)) {
-        for (const tag of contact.tags) {
-          if (planMapping[tag]) {
-            subscriptionTier = planMapping[tag];
-            break;
-          }
+      for (const tag of tagArray) {
+        if (planMapping[tag as keyof typeof planMapping]) {
+          subscriptionTier = planMapping[tag as keyof typeof planMapping];
+          break;
         }
       }
 
@@ -664,11 +692,11 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
         subscriptionTier,
         subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
         subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        tags: contact.tags || [],
+        tags: tagArray,
         generationsLimit: generationsLimit
       });
 
-      console.log(`HighLevel webhook: Updated user ${contact.email} to ${subscriptionTier} tier`);
+      console.log(`HighLevel webhook: Updated user ${email} to ${subscriptionTier} tier`);
 
       res.json({
         success: true,
