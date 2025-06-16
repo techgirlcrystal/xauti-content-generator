@@ -236,37 +236,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let subscriptionTier = "free";
         let generationsLimit = 0;
         
-        // Check tags for subscription plans - also check partial matches for case insensitive detection
+        // Check tags for subscription plans - prioritize highest tier found
+        let foundTier = "free";
         if (Array.isArray(tags)) {
           for (const tag of tags) {
             const tagLower = tag.toLowerCase();
+            console.log(`Checking tag: "${tag}" (lowercase: "${tagLower}")`);
             
-            // Direct mapping first
-            if (planMapping[tag as keyof typeof planMapping]) {
-              subscriptionTier = planMapping[tag as keyof typeof planMapping];
-              console.log(`Found exact plan tag: ${tag} -> ${subscriptionTier}`);
-              break;
+            // Check for unlimited tier first (highest value)
+            if (tagLower.includes('xauti crm business') || 
+                tagLower.includes('business in a box') || 
+                tagLower.includes('$99') || 
+                tagLower.includes('99 plan') || 
+                tagLower.includes('unlimited')) {
+              foundTier = "unlimited";
+              console.log(`Found UNLIMITED plan tag: ${tag} -> ${foundTier}`);
+              break; // Stop at highest tier
+            }
+            // Check for pro tier
+            else if (tagLower.includes('27') || 
+                     tagLower.includes('xauti 27') ||
+                     tagLower.includes('content tool')) {
+              if (foundTier === "free") foundTier = "pro"; // Only if no higher tier found
+              console.log(`Found PRO plan tag: ${tag} -> ${foundTier}`);
+            }
+            // Check for basic tier
+            else if (tagLower.includes('$3') || 
+                     tagLower.includes('3 dollar') || 
+                     tagLower.includes('automation')) {
+              if (foundTier === "free") foundTier = "basic"; // Only if no higher tier found
+              console.log(`Found BASIC plan tag: ${tag} -> ${foundTier}`);
             }
             
-            // Partial matching for variations
-            if (tagLower.includes('xauti crm business') || tagLower.includes('business in a box')) {
-              subscriptionTier = "unlimited";
-              console.log(`Found unlimited plan tag: ${tag} -> ${subscriptionTier}`);
-              break;
-            } else if (tagLower.includes('27') || tagLower.includes('xauti 27')) {
-              subscriptionTier = "pro";
-              console.log(`Found pro plan tag: ${tag} -> ${subscriptionTier}`);
-              break;
-            } else if (tagLower.includes('$3') || tagLower.includes('3 dollar') || tagLower.includes('automation')) {
-              subscriptionTier = "basic";
-              console.log(`Found basic plan tag: ${tag} -> ${subscriptionTier}`);
-              break;
-            } else if (tagLower.includes('$99') || tagLower.includes('99 plan') || tagLower.includes('unlimited')) {
-              subscriptionTier = "unlimited";
-              console.log(`Found unlimited plan tag: ${tag} -> ${subscriptionTier}`);
-              break;
+            // Direct mapping check
+            if (planMapping[tag as keyof typeof planMapping]) {
+              const directTier = planMapping[tag as keyof typeof planMapping];
+              if (directTier === "unlimited" || (directTier === "pro" && foundTier !== "unlimited") || (directTier === "basic" && foundTier === "free")) {
+                foundTier = directTier;
+                console.log(`Found EXACT plan tag: ${tag} -> ${foundTier}`);
+              }
             }
           }
+          subscriptionTier = foundTier;
+          console.log(`Final subscription tier: ${subscriptionTier}`);
         }
         
         // Set generation limits
@@ -1037,8 +1049,26 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       // Check if specific tags were provided
       if (tags && Array.isArray(tags)) {
         for (const tag of tags) {
+          const tagLower = tag.toLowerCase();
+          
+          // Direct mapping first
           if (planMapping[tag as keyof typeof planMapping]) {
             subscriptionTier = planMapping[tag as keyof typeof planMapping];
+            break;
+          }
+          
+          // Partial matching for variations
+          if (tagLower.includes('xauti crm business') || tagLower.includes('business in a box')) {
+            subscriptionTier = "unlimited";
+            break;
+          } else if (tagLower.includes('27') || tagLower.includes('xauti 27')) {
+            subscriptionTier = "pro";
+            break;
+          } else if (tagLower.includes('$3') || tagLower.includes('3 dollar') || tagLower.includes('automation')) {
+            subscriptionTier = "basic";
+            break;
+          } else if (tagLower.includes('$99') || tagLower.includes('99 plan') || tagLower.includes('unlimited')) {
+            subscriptionTier = "unlimited";
             break;
           }
         }

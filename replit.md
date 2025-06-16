@@ -109,6 +109,8 @@ This is a full-stack web application built for generating content based on user-
   - Implemented upgrade flow with options to upgrade plan or purchase additional generations ($7 each)
   - Created blocked form states and clear messaging for users who exceed their generation limits
   - Fixed tag mapping to handle various $3 plan formats and synced crystal.hale07@gmail.com with Basic subscription
+  - CRITICAL: Webhook tag mapping requires immediate fix - users incorrectly assigned to free tier instead of paid plans
+  - Enhanced webhook debugging to identify exact HighLevel payload structures for each plan tier
 
 - June 15, 2025: Tier-Based Subscription System with Usage Limits
   - Implemented comprehensive subscription management with 4 tiers: Free (0), $3 Basic (2), $27 Pro (10), $99+ Unlimited
