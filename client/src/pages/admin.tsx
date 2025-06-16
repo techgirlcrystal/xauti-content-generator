@@ -235,9 +235,15 @@ export default function Admin() {
                         <div>Value: <strong>{newTenant.subdomain}.xauti-platform.replit.app</strong></div>
                         <div>TTL: <strong>300</strong></div>
                       </div>
-                      <p className="text-xs text-green-700 mt-2">
-                        Give these exact settings to your client to add in their domain registrar (GoDaddy, Namecheap, etc.)
-                      </p>
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                        <strong className="text-blue-800">Your client points their domain:</strong>
+                        <div className="mt-1 text-blue-700">
+                          <strong>{newTenant.domain}</strong> → <strong>{newTenant.subdomain}.xauti-platform.replit.app</strong>
+                        </div>
+                        <p className="text-blue-600 mt-1">
+                          They add this CNAME record in their domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
