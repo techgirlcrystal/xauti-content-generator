@@ -212,18 +212,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "$3": "basic",
           "XAUTI 27 CONTENT TOOL": "pro", 
           "XAUTI CRM BUSINESS IN A BOX": "unlimited",
-          "XAUTI CRM UNOCK": "unlimited"
+          "XAUTI CRM UNOCK": "unlimited",
+          "$99 Plan Purchased": "unlimited",
+          "$99": "unlimited",
+          "99 Plan": "unlimited",
+          "Unlimited Plan": "unlimited"
         };
         
         let subscriptionTier = "free";
         let generationsLimit = 0;
         
-        // Check tags for subscription plans
+        // Check tags for subscription plans - also check partial matches for case insensitive detection
         if (Array.isArray(tags)) {
           for (const tag of tags) {
+            const tagLower = tag.toLowerCase();
+            
+            // Direct mapping first
             if (planMapping[tag as keyof typeof planMapping]) {
               subscriptionTier = planMapping[tag as keyof typeof planMapping];
-              console.log(`Found plan tag: ${tag} -> ${subscriptionTier}`);
+              console.log(`Found exact plan tag: ${tag} -> ${subscriptionTier}`);
+              break;
+            }
+            
+            // Partial matching for variations
+            if (tagLower.includes('xauti crm business') || tagLower.includes('business in a box')) {
+              subscriptionTier = "unlimited";
+              console.log(`Found unlimited plan tag: ${tag} -> ${subscriptionTier}`);
+              break;
+            } else if (tagLower.includes('27') || tagLower.includes('xauti 27')) {
+              subscriptionTier = "pro";
+              console.log(`Found pro plan tag: ${tag} -> ${subscriptionTier}`);
+              break;
+            } else if (tagLower.includes('$3') || tagLower.includes('3 dollar') || tagLower.includes('automation')) {
+              subscriptionTier = "basic";
+              console.log(`Found basic plan tag: ${tag} -> ${subscriptionTier}`);
+              break;
+            } else if (tagLower.includes('$99') || tagLower.includes('99 plan') || tagLower.includes('unlimited')) {
+              subscriptionTier = "unlimited";
+              console.log(`Found unlimited plan tag: ${tag} -> ${subscriptionTier}`);
               break;
             }
           }
