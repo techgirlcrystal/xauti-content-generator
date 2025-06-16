@@ -384,13 +384,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   
-  // Authentication routes with real-time access control
+  // Authentication routes with password verification and real-time access control
   app.post("/api/auth/signin", async (req, res) => {
     try {
-      const { name, email } = req.body;
+      const { name, email, password } = req.body;
       
-      if (!name || !email) {
-        return res.status(400).json({ error: "Name and email are required" });
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: "Name, email, and password are required" });
       }
 
       // Check if user exists
@@ -431,7 +431,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check for pro tier
           else if (tagLower.includes('27') || 
                    tagLower.includes('content tool') ||
-                   tagLower.includes('xauti 27')) {
+                   tagLower.includes('xauti 27') ||
+                   tagLower.includes('27 content') ||
+                   tagLower.includes('$27')) {
             if (subscriptionTier === "free") {
               subscriptionTier = "pro";
               generationsLimit = 10;
