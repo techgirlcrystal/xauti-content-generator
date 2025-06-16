@@ -127,9 +127,22 @@ export default function Landing() {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6 text-sm text-gray-500">
-          <p>Generate 30 days of content for your business</p>
-          <p>Track your progress and build consistency</p>
+        <div className="text-center mt-6">
+          <div className="bg-white rounded-lg p-4 border border-blue-200 mb-4">
+            <p className="text-sm text-gray-700 mb-2">
+              Don't have a subscription yet?
+            </p>
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <a href="https://xautimarketingai.com/" target="_blank" rel="noopener noreferrer">
+                Sign Up Here
+              </a>
+            </Button>
+          </div>
+          
+          <div className="text-sm text-gray-500">
+            <p>Generate 30 days of content for your business</p>
+            <p>Track your progress and build consistency</p>
+          </div>
         </div>
       </div>
     </div>
