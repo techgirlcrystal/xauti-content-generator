@@ -23,6 +23,7 @@ interface User {
   lastContentDate: string | null;
   subscriptionTier: string;
   subscriptionStatus: string;
+  subscriptionEndDate: string | null;
   generationsLimit: number;
   generationsUsed: number;
   tags: string[];
@@ -262,6 +263,17 @@ export default function Home() {
                   {user.subscriptionTier === 'unlimited' ? 'Unlimited' : 'Left This Month'}
                 </p>
               </div>
+              {user.subscriptionEndDate && (
+                <div className="text-center">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Calendar className="h-5 w-5 text-purple-500" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      {new Date(user.subscriptionEndDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">Plan Renews</p>
+                </div>
+              )}
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

@@ -174,12 +174,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                    body.contact?.tags ||
                    body.customer?.tags ||
                    [];
+
+      // Try to extract subscription/renewal date from various fields
+      const subscriptionEndDate = body.subscriptionEndDate ||
+                                 body['contact.subscriptionEndDate'] ||
+                                 body.contact?.subscriptionEndDate ||
+                                 body.renewalDate ||
+                                 body['contact.renewalDate'] ||
+                                 body.contact?.renewalDate ||
+                                 body.planEndDate ||
+                                 body['contact.planEndDate'] ||
+                                 body.contact?.planEndDate;
       
       console.log('Extracted data:');
       console.log('- Email:', email);
       console.log('- First Name:', firstName);
       console.log('- Last Name:', lastName);
       console.log('- Tags:', tags);
+      console.log('- Subscription End Date:', subscriptionEndDate);
       
       if (email) {
         // Get or create user
@@ -221,11 +233,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tierLimits = { free: 0, basic: 2, pro: 10, unlimited: 999999 };
         generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
         
+        // Calculate subscription end date - use provided date or default to 30 days
+        let endDate = null;
+        if (subscriptionTier !== "free") {
+          if (subscriptionEndDate) {
+            // Parse the provided renewal date
+            endDate = new Date(subscriptionEndDate);
+            // If invalid date, fall back to 30 days from now
+            if (isNaN(endDate.getTime())) {
+              endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            }
+          } else {
+            // Default to 30 days from now
+            endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          }
+        }
+        
         // Update user subscription
         const updatedUser = await storage.updateUserSubscription(user.id, {
           subscriptionTier,
           subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
-          subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          subscriptionEndDate: endDate,
           tags: Array.isArray(tags) ? tags : (tags ? [tags] : []),
           generationsLimit: generationsLimit
         });

@@ -39,6 +39,7 @@ interface User {
   lastContentDate: string | null;
   subscriptionTier: string;
   subscriptionStatus: string;
+  subscriptionEndDate: string | null;
   generationsLimit: number;
   generationsUsed: number;
   tags: string[];
