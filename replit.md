@@ -98,6 +98,15 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 16, 2025: Complete Access Control System with Subscription Enforcement
+  - Implemented comprehensive UI access control preventing non-subscribers from using the generator
+  - Added prominent signup link (https://xautimarketingai.com/home) for users without valid subscription tags
+  - Created generation limit tracking display showing remaining content generations per month
+  - Enhanced user dashboard with subscription tier status (Free, Basic $3, Pro $27, Unlimited $99+)
+  - Enforced generation limits at both UI and API levels with clear upgrade messaging
+  - Updated webhook system to properly map HighLevel subscription tags to access tiers
+  - Added real-time generation count display and limit warnings for active subscribers
+
 - June 15, 2025: Tier-Based Subscription System with Usage Limits
   - Implemented comprehensive subscription management with 4 tiers: Free (0), $3 Basic (2), $27 Pro (10), $99+ Unlimited
   - Added Stripe payment integration for $7 per additional generation purchases

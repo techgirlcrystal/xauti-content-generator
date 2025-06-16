@@ -37,6 +37,11 @@ interface User {
   email: string;
   contentStreak: number;
   lastContentDate: string | null;
+  subscriptionTier: string;
+  subscriptionStatus: string;
+  generationsLimit: number;
+  generationsUsed: number;
+  tags: string[];
 }
 
 export default function Generate() {
