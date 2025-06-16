@@ -3,14 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CreditCard, Plus, Video } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Settings() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [quantity, setQuantity] = useState("1");
+  const [scriptQuantity, setScriptQuantity] = useState("1");
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -96,6 +101,81 @@ export default function Settings() {
     }
   };
 
+  const handlePurchaseGenerations = async () => {
+    if (!quantity || parseInt(quantity) < 1) {
+      toast({
+        title: "Invalid Quantity",
+        description: "Please select a valid quantity.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsPurchasing(true);
+    
+    try {
+      const generationCount = parseInt(quantity);
+      const amount = generationCount * 7; // $7 per generation
+      
+      const response = await fetch("/api/purchase-generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          generationCount: generationCount
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.clientSecret) {
+        // Redirect to Stripe checkout or handle payment
+        const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+        
+        const { error } = await stripe.confirmPayment({
+          clientSecret: data.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/settings`,
+          },
+        });
+
+        if (error) {
+          toast({
+            title: "Payment Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Payment Successful",
+            description: `Added ${generationCount} generation${generationCount > 1 ? 's' : ''} to your account!`,
+          });
+          
+          // Refresh user data
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
+      } else {
+        toast({
+          title: "Payment Setup Failed",
+          description: data.error || "Unable to setup payment. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Purchase Failed",
+        description: "Unable to process purchase. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-2xl mx-auto pt-8">
@@ -166,6 +246,74 @@ export default function Settings() {
                 {isLoading ? "Updating Password..." : "Update Password"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Purchase Additional Generations
+            </CardTitle>
+            <CardDescription>
+              Buy extra generations for $7 each to extend your monthly limit
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900">Current Balance</span>
+                <span className="text-lg font-bold text-blue-900">
+                  {currentUser.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (currentUser.generationsLimit || 0) - (currentUser.generationsUsed || 0))} generations left
+                </span>
+              </div>
+              <p className="text-xs text-blue-700">
+                Subscription: {currentUser.subscriptionTier || 'Free'} ({currentUser.generationsLimit || 0} monthly limit)
+              </p>
+            </div>
+
+            {currentUser.subscriptionTier !== 'unlimited' && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Select value={quantity} onValueChange={setQuantity}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select quantity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...Array(10)].map((_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1} generation{i > 0 ? 's' : ''} - ${(i + 1) * 7}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <p className="text-sm text-green-800">
+                    <strong>Total: ${parseInt(quantity) * 7}</strong> for {quantity} additional generation{parseInt(quantity) > 1 ? 's' : ''}
+                  </p>
+                </div>
+                
+                <Button 
+                  onClick={handlePurchaseGenerations}
+                  className="w-full"
+                  disabled={isPurchasing}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {isPurchasing ? "Processing Payment..." : `Purchase ${quantity} Generation${parseInt(quantity) > 1 ? 's' : ''}`}
+                </Button>
+              </div>
+            )}
+
+            {currentUser.subscriptionTier === 'unlimited' && (
+              <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                <p className="text-sm text-purple-800">
+                  You have unlimited generations! No need to purchase additional ones.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
