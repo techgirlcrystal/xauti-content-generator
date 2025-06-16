@@ -612,26 +612,39 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     try {
       console.log('HighLevel webhook received:', JSON.stringify(req.body, null, 2));
       
-      // Handle both nested and flattened data structures
+      // Handle multiple possible data structures from HighLevel
       let email, firstName, lastName, tags;
       
+      // Try different possible structures
       if (req.body.contact && req.body.contact.email) {
-        // Nested structure
+        // Nested structure: { contact: { email: "...", firstName: "..." } }
         email = req.body.contact.email;
         firstName = req.body.contact.firstName;
         lastName = req.body.contact.lastName;
         tags = req.body.contact.tags;
       } else if (req.body['contact.email']) {
-        // Flattened structure from HighLevel
+        // Flattened structure: { "contact.email": "...", "contact.firstName": "..." }
         email = req.body['contact.email'];
         firstName = req.body['contact.firstName'];
         lastName = req.body['contact.lastName'];
         tags = req.body['contact.tags'];
+      } else if (req.body.email) {
+        // Direct structure: { email: "...", firstName: "..." }
+        email = req.body.email;
+        firstName = req.body.firstName;
+        lastName = req.body.lastName;
+        tags = req.body.tags;
       } else {
-        return res.status(400).json({ error: "Contact email is required" });
+        // Log the structure for debugging
+        console.log('Unknown webhook structure. Available keys:', Object.keys(req.body));
+        return res.status(400).json({ 
+          error: "Contact email is required",
+          debug: "Available keys: " + Object.keys(req.body).join(', ')
+        });
       }
       
       if (!email) {
+        console.log('No email found in webhook data');
         return res.status(400).json({ error: "Contact email is required" });
       }
 
