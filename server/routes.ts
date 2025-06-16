@@ -638,6 +638,7 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
 
   // Simple test webhook that accepts everything
   app.post("/api/test-webhook", async (req, res) => {
+    console.log("Test webhook received:", JSON.stringify(req.body, null, 2));
     res.json({
       success: true,
       receivedData: req.body,
@@ -658,9 +659,11 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
       const tags = req.body['contact.tags'] || req.body.tags;
       
       if (!email) {
+        console.log('No email found. Available keys:', Object.keys(req.body));
         return res.status(400).json({ 
           error: "Contact email is required",
-          receivedData: req.body 
+          receivedData: req.body,
+          availableKeys: Object.keys(req.body)
         });
       }
       
@@ -714,110 +717,6 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
         success: true,
         message: `User updated to ${subscriptionTier} tier`,
         user: updatedUser
-      });
-      
-      // Try all possible ways to extract email
-      let email = req.body['contact.email'] || 
-                  req.body.email || 
-                  req.body.contactEmail ||
-                  (req.body.contact && req.body.contact.email);
-      
-      let firstName = req.body['contact.firstName'] || 
-                      req.body['contact.first_name'] || 
-                      req.body.firstName ||
-                      req.body.first_name ||
-                      (req.body.contact && req.body.contact.firstName);
-      
-      let lastName = req.body['contact.lastName'] || 
-                     req.body['contact.last_name'] || 
-                     req.body.lastName ||
-                     req.body.last_name ||
-                     (req.body.contact && req.body.contact.lastName);
-      
-      let tags = req.body['contact.tags'] || 
-                 req.body.tags ||
-                 (req.body.contact && req.body.contact.tags);
-      
-      console.log('Extracted data:', { email, firstName, lastName, tags });
-      
-      if (!email) {
-        console.log('❌ No email found in any expected field');
-        return res.status(400).json({ 
-          error: "Contact email is required",
-          receivedKeys: Object.keys(req.body),
-          fullData: req.body
-        });
-      }
-      
-      console.log('✅ Email found:', email);
-
-      // Map HighLevel plan names to subscription tiers
-      const planMapping = {
-        "$3 No Code Tool Automation and Content Creator Access": "basic",
-        "XAUTI 27 CONTENT TOOL": "pro", 
-        "XAUTI CRM BUSINESS IN A BOX": "unlimited",
-        "XAUTI CRM UNOCK": "unlimited"
-      };
-
-      // Get user by email
-      let user = await storage.getUserByEmail(email);
-      
-      // Create user if doesn't exist
-      if (!user) {
-        user = await storage.createUser({
-          name: (firstName || "") + " " + (lastName || ""),
-          email: email
-        });
-      }
-
-      // Determine subscription tier from tags
-      let subscriptionTier = "free";
-      let generationsLimit = 0;
-
-      // Parse tags - could be string or array
-      let tagArray: string[] = [];
-      if (tags) {
-        if (Array.isArray(tags)) {
-          tagArray = tags;
-        } else if (typeof tags === 'string') {
-          // Handle comma-separated string
-          tagArray = tags.split(',').map(tag => tag.trim());
-        }
-      }
-
-      // Check tags for plan membership
-      for (const tag of tagArray) {
-        if (planMapping[tag as keyof typeof planMapping]) {
-          subscriptionTier = planMapping[tag as keyof typeof planMapping];
-          break;
-        }
-      }
-
-      // Set generation limits based on tier
-      const tierLimits = {
-        free: 0,
-        basic: 2,
-        pro: 10,
-        unlimited: 999999
-      };
-
-      generationsLimit = tierLimits[subscriptionTier as keyof typeof tierLimits] || 0;
-
-      // Update user subscription
-      const updatedUser = await storage.updateUserSubscription(user.id, {
-        subscriptionTier,
-        subscriptionStatus: subscriptionTier === "free" ? "inactive" : "active",
-        subscriptionEndDate: subscriptionTier === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        tags: tagArray,
-        generationsLimit: generationsLimit
-      });
-
-      console.log(`HighLevel webhook: Updated user ${email} to ${subscriptionTier} tier`);
-
-      res.json({
-        success: true,
-        user: updatedUser,
-        message: `User updated to ${subscriptionTier} tier`
       });
     } catch (error: any) {
       console.error('HighLevel webhook error:', error);
