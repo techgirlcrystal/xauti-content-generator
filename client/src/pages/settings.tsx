@@ -148,8 +148,49 @@ export default function Settings() {
       
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout...');
-        // Use window.location.href for more reliable redirect
-        window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        
+        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+        if (!stripePublicKey) {
+          toast({
+            title: "Configuration Error",
+            description: "Payment system not configured.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (!(window as any).Stripe) {
+          toast({
+            title: "Payment Error", 
+            description: "Payment system not loaded.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const stripe = (window as any).Stripe(stripePublicKey);
+        
+        try {
+          const { error } = await stripe.redirectToCheckout({
+            sessionId: data.sessionId
+          });
+
+          if (error) {
+            console.error('Stripe checkout error:', error);
+            toast({
+              title: "Payment Failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
+        } catch (err) {
+          console.error('Stripe redirect error:', err);
+          toast({
+            title: "Payment Error",
+            description: "Unable to open payment page. Please try again.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Payment Setup Failed",
@@ -212,8 +253,49 @@ export default function Settings() {
       
       if (data.sessionId) {
         console.log('Redirecting to Stripe checkout for script purchase...');
-        // Use direct URL redirect for script purchases too
-        window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        
+        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+        if (!stripePublicKey) {
+          toast({
+            title: "Configuration Error",
+            description: "Payment system not configured.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (!(window as any).Stripe) {
+          toast({
+            title: "Payment Error", 
+            description: "Payment system not loaded.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const stripe = (window as any).Stripe(stripePublicKey);
+        
+        try {
+          const { error } = await stripe.redirectToCheckout({
+            sessionId: data.sessionId
+          });
+
+          if (error) {
+            console.error('Stripe checkout error:', error);
+            toast({
+              title: "Payment Failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
+        } catch (err) {
+          console.error('Stripe redirect error:', err);
+          toast({
+            title: "Payment Error",
+            description: "Unable to open payment page. Please try again.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Payment Setup Failed",
