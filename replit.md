@@ -98,6 +98,18 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 16, 2025: Complete Stripe Integration with Tier-Based Script Pricing
+  - Integrated Stripe payment system directly into settings page for generation purchases
+  - Implemented tier-based pricing for script generations: $10 for Basic users, $7 for Pro+ users
+  - Added tabbed interface for separate content and script generation purchases
+  - Content generations remain $7 for all subscription tiers
+  - Script generation purchases restricted to paid subscribers (Basic+)
+  - Enhanced settings page with quantity selection (1-10 generations) and real-time pricing
+  - Added generation balance display showing remaining monthly generations
+  - Updated home page generation explanation to direct users to settings for purchases
+  - Unlimited tier users see appropriate messaging (no purchase needed)
+  - Comprehensive payment flow with Stripe confirmation and user account updates
+
 - June 16, 2025: Password Management and Script Generation Access Control
   - Added comprehensive password change functionality with secure backend validation
   - Created dedicated settings page accessible via user dashboard navigation

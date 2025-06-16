@@ -394,7 +394,7 @@ export default function Home() {
               </div>
               <div className="flex items-start gap-2 mt-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p><strong>Need More?</strong> Purchase additional generations for $7 each or upgrade your plan</p>
+                <p><strong>Need More?</strong> Click "Settings" in your dashboard to purchase additional generations ($7 for content, $10/$7 for scripts based on tier) or upgrade your plan</p>
               </div>
             </div>
           </CardContent>
