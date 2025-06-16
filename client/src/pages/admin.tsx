@@ -137,10 +137,10 @@ export default function Admin() {
   });
 
   const handleCreateTenant = () => {
-    if (!newTenant.name || !newTenant.domain || !newTenant.subdomain) {
+    if (!newTenant.name || !newTenant.subdomain) {
       toast({
         title: "Required Fields Missing",
-        description: "Please fill in name, domain, and subdomain",
+        description: "Please fill in client name and platform subdomain",
         variant: "destructive",
       });
       return;
