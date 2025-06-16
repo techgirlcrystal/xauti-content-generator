@@ -98,6 +98,13 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 16, 2025: Fixed Stripe Checkout Redirect Issue
+  - Resolved payment checkout redirection problem preventing users from accessing Stripe payment page
+  - Replaced JavaScript SDK redirect with direct URL redirect for more reliable checkout flow
+  - Enhanced purchase debugging with comprehensive console logging
+  - Verified session ID generation and Stripe configuration working correctly
+  - Users can now successfully complete purchases through Stripe's secure checkout page
+
 - June 16, 2025: Complete Stripe Integration with Tier-Based Script Pricing
   - Integrated Stripe payment system directly into settings page for generation purchases
   - Implemented tier-based pricing for script generations: $10 for Basic users, $7 for Pro+ users

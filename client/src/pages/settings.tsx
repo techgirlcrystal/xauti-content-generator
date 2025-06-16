@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,19 +147,9 @@ export default function Settings() {
       console.log('Purchase API response:', data);
       
       if (data.sessionId) {
-        const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-        
-        const { error } = await stripe.redirectToCheckout({
-          sessionId: data.sessionId
-        });
-
-        if (error) {
-          toast({
-            title: "Payment Failed",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        console.log('Redirecting to Stripe checkout...');
+        // Use window.location.href for more reliable redirect
+        window.location.href = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
       } else {
         toast({
           title: "Payment Setup Failed",
