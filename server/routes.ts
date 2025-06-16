@@ -479,61 +479,7 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
-  // Simple webhook test endpoint
-  app.post("/api/test-webhook", async (req, res) => {
-    const webhookUrl = 'https://n8n.srv847085.hstgr.cloud/webhook/words-only';
-    
-    try {
-      console.log(`Testing webhook: ${webhookUrl}`);
 
-      const testData = {
-        industry: "Test Industry",
-        selected_topics: ["test_topic"]
-      };
-
-      const testResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(testData),
-        signal: AbortSignal.timeout(10000) // 10 second timeout for test
-      });
-
-      console.log('Test response status:', testResponse.status);
-
-      if (!testResponse.ok) {
-        const errorText = await testResponse.text();
-        return res.json({
-          success: false,
-          status: testResponse.status,
-          error: errorText,
-          message: 'Webhook returned error status'
-        });
-      }
-
-      const responseData = await testResponse.json();
-      console.log('Test response data:', JSON.stringify(responseData, null, 2));
-
-      res.json({
-        success: true,
-        status: testResponse.status,
-        data: responseData,
-        message: 'Webhook test successful'
-      });
-
-    } catch (error: any) {
-      console.log(`Webhook test error: ${error}`);
-      res.json({
-        success: false,
-        error: error.message,
-        webhook_url: webhookUrl,
-        message: error.name === 'AbortError' 
-          ? 'Webhook test timeout'
-          : `Test failed: ${error.message}`
-      });
-    }
-  });
 
   // Analyze brand tone from user examples
   app.post("/api/analyze-tone", async (req, res) => {
@@ -652,16 +598,7 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     res.json(response);
   });
 
-  // Simple test webhook that accepts everything
-  app.post("/api/test-webhook", async (req, res) => {
-    console.log("Test webhook received:", JSON.stringify(req.body, null, 2));
-    res.json({
-      success: true,
-      receivedData: req.body,
-      keys: Object.keys(req.body),
-      message: "Data received successfully"
-    });
-  });
+
 
   // Simple webhook that accepts everything - for HighLevel debugging
   app.post("/api/highlevel/webhook", (req, res) => {
