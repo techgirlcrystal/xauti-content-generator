@@ -41,10 +41,8 @@ interface CreateTenantForm {
   companyName: string;
   customDomain: string;
   n8nWebhookUrl: string;
-  n8nApiKey: string;
   stripeSecretKey: string;
   stripePublicKey: string;
-  stripeWebhookSecret: string;
   openaiApiKey: string;
 }
 
@@ -55,10 +53,8 @@ export default function Admin() {
     companyName: "",
     customDomain: "",
     n8nWebhookUrl: "",
-    n8nApiKey: "",
     stripeSecretKey: "",
     stripePublicKey: "",
-    stripeWebhookSecret: "",
     openaiApiKey: ""
   });
 
@@ -87,10 +83,8 @@ export default function Admin() {
           secondaryColor: "#f0f9ff",
         },
         n8nWebhookUrl: tenant.n8nWebhookUrl,
-        n8nApiKey: tenant.n8nApiKey,
         stripeSecretKey: tenant.stripeSecretKey,
         stripePublicKey: tenant.stripePublicKey,
-        stripeWebhookSecret: tenant.stripeWebhookSecret,
         openaiApiKey: tenant.openaiApiKey,
         isActive: true,
         plan: "white_label"
@@ -106,10 +100,8 @@ export default function Admin() {
         companyName: "",
         customDomain: "",
         n8nWebhookUrl: "",
-        n8nApiKey: "",
         stripeSecretKey: "",
         stripePublicKey: "",
-        stripeWebhookSecret: "",
         openaiApiKey: ""
       });
     },
@@ -239,26 +231,17 @@ export default function Admin() {
                 <div className="space-y-4">
                   <h4 className="font-semibold">Client API Keys</h4>
                   
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="n8nWebhookUrl">n8n Webhook URL</Label>
-                      <Input
-                        id="n8nWebhookUrl"
-                        value={newTenant.n8nWebhookUrl}
-                        onChange={(e) => setNewTenant({ ...newTenant, n8nWebhookUrl: e.target.value })}
-                        placeholder="https://n8n.example.com/webhook"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="n8nApiKey">n8n API Key</Label>
-                      <Input
-                        id="n8nApiKey"
-                        type="password"
-                        value={newTenant.n8nApiKey}
-                        onChange={(e) => setNewTenant({ ...newTenant, n8nApiKey: e.target.value })}
-                        placeholder="n8n-api-key"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="n8nWebhookUrl">n8n Webhook URL</Label>
+                    <Input
+                      id="n8nWebhookUrl"
+                      value={newTenant.n8nWebhookUrl}
+                      onChange={(e) => setNewTenant({ ...newTenant, n8nWebhookUrl: e.target.value })}
+                      placeholder="https://n8n.example.com/webhook/content"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Client's workflow endpoint for content generation
+                    </p>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -283,27 +266,15 @@ export default function Admin() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="stripeWebhookSecret">Stripe Webhook Secret</Label>
-                      <Input
-                        id="stripeWebhookSecret"
-                        type="password"
-                        value={newTenant.stripeWebhookSecret}
-                        onChange={(e) => setNewTenant({ ...newTenant, stripeWebhookSecret: e.target.value })}
-                        placeholder="whsec_..."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="openaiApiKey">OpenAI API Key</Label>
-                      <Input
-                        id="openaiApiKey"
-                        type="password"
-                        value={newTenant.openaiApiKey}
-                        onChange={(e) => setNewTenant({ ...newTenant, openaiApiKey: e.target.value })}
-                        placeholder="sk-proj-..."
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="openaiApiKey">OpenAI API Key</Label>
+                    <Input
+                      id="openaiApiKey"
+                      type="password"
+                      value={newTenant.openaiApiKey}
+                      onChange={(e) => setNewTenant({ ...newTenant, openaiApiKey: e.target.value })}
+                      placeholder="sk-proj-..."
+                    />
                   </div>
                 </div>
 
