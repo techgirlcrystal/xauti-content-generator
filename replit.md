@@ -98,6 +98,16 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 17, 2025: Fixed Payment System Balance Updates with Separate Content/Script Tracking
+  - Resolved critical payment processing bug where purchased generations weren't updating dashboard balances
+  - Added separate tracking for content generations vs script generations in database schema
+  - Updated Stripe webhook system with proper secret configuration for production payments
+  - Fixed ernesthale@me.com account to show correct balances: 2 content + 1 script generations
+  - Enhanced settings page to display separate content and script generation balances
+  - Webhook now properly distinguishes between content ($7) and script purchases ($10 Basic, $7 Pro+)
+  - Production webhook URL configured: /api/webhook/stripe with proper Stripe signature verification
+  - All future payments now automatically update user balances in real-time across all subscription tiers
+
 - June 17, 2025: Platform Layout Optimization and Deployment Preparation
   - Added comprehensive delete functionality for all content request types (completed, failed, processing)
   - Created DELETE API endpoint with proper user validation and error handling
