@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Tenant {
   id: number;
@@ -39,14 +38,8 @@ interface Tenant {
 }
 
 interface CreateTenantForm {
-  name: string;
-  domain: string;
-  subdomain: string;
-  ownerId: number;
   companyName: string;
-  primaryColor: string;
-  secondaryColor: string;
-  logo: string;
+  customDomain: string;
   n8nWebhookUrl: string;
   n8nApiKey: string;
   stripeSecretKey: string;
@@ -59,14 +52,8 @@ export default function Admin() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [newTenant, setNewTenant] = useState<CreateTenantForm>({
-    name: "",
-    domain: "",
-    subdomain: "",
-    ownerId: 0,
     companyName: "",
-    primaryColor: "#0066cc",
-    secondaryColor: "#f0f9ff",
-    logo: "",
+    customDomain: "",
     n8nWebhookUrl: "",
     n8nApiKey: "",
     stripeSecretKey: "",
@@ -83,17 +70,21 @@ export default function Admin() {
 
   // Create tenant mutation
   const createTenantMutation = useMutation({
-    mutationFn: (tenant: CreateTenantForm) => 
-      apiRequest("POST", "/api/admin/tenants", {
-        name: tenant.name,
-        domain: tenant.domain,
-        subdomain: tenant.subdomain,
-        ownerId: tenant.ownerId,
+    mutationFn: (tenant: CreateTenantForm) => {
+      // Generate subdomain from company name
+      const subdomain = tenant.companyName.toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 15);
+      
+      return apiRequest("POST", "/api/admin/tenants", {
+        name: tenant.companyName,
+        domain: tenant.customDomain,
+        subdomain: subdomain,
+        ownerId: 0,
         brandingConfig: {
           companyName: tenant.companyName,
-          primaryColor: tenant.primaryColor,
-          secondaryColor: tenant.secondaryColor,
-          logo: tenant.logo,
+          primaryColor: "#0066cc",
+          secondaryColor: "#f0f9ff",
         },
         n8nWebhookUrl: tenant.n8nWebhookUrl,
         n8nApiKey: tenant.n8nApiKey,
@@ -103,22 +94,17 @@ export default function Admin() {
         openaiApiKey: tenant.openaiApiKey,
         isActive: true,
         plan: "white_label"
-      }),
+      });
+    },
     onSuccess: () => {
       toast({
-        title: "White Label Client Created",
-        description: "New tenant created successfully with isolated environment.",
+        title: "Success",
+        description: "White label client created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tenants"] });
       setNewTenant({
-        name: "",
-        domain: "",
-        subdomain: "",
-        ownerId: 0,
         companyName: "",
-        primaryColor: "#0066cc",
-        secondaryColor: "#f0f9ff",
-        logo: "",
+        customDomain: "",
         n8nWebhookUrl: "",
         n8nApiKey: "",
         stripeSecretKey: "",
@@ -129,18 +115,18 @@ export default function Admin() {
     },
     onError: (error: any) => {
       toast({
-        title: "Creation Failed",
-        description: error.message || "Failed to create tenant",
+        title: "Error",
+        description: error.message || "Failed to create client",
         variant: "destructive",
       });
     },
   });
 
   const handleCreateTenant = () => {
-    if (!newTenant.name || !newTenant.subdomain) {
+    if (!newTenant.companyName.trim()) {
       toast({
-        title: "Required Fields Missing",
-        description: "Please fill in client name and platform subdomain",
+        title: "Validation Error",
+        description: "Company name is required",
         variant: "destructive",
       });
       return;
@@ -148,357 +134,252 @@ export default function Admin() {
     createTenantMutation.mutate(newTenant);
   };
 
+  const generateSubdomain = (companyName: string) => {
+    return companyName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15);
+  };
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">White Label Administration</h1>
-        <p className="text-muted-foreground">Manage $199 white label client environments</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">White Label Admin</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Setup new $199 white label client platforms
+          </p>
+        </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="create">Create New Client</TabsTrigger>
-          <TabsTrigger value="manage">Manage Clients</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="create">New Client</TabsTrigger>
+            <TabsTrigger value="manage">Manage</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{tenants?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">White label instances</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {tenants?.filter((t: Tenant) => t.isActive).length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">Currently active</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${(tenants?.length || 0) * 199}</div>
-                <p className="text-xs text-muted-foreground">Total licensing revenue</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+          <TabsContent value="overview">
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active Clients</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">
+                    {tenants?.filter((t: Tenant) => t.isActive).length || 0}
+                  </div>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="create" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New White Label Client</CardTitle>
-              <CardDescription>
-                Set up a new $199 white label environment with isolated n8n, Stripe, and branding
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Client Name</Label>
-                  <Input
-                    id="name"
-                    value={newTenant.name}
-                    onChange={(e) => setNewTenant({...newTenant, name: e.target.value})}
-                    placeholder="Acme Marketing Agency"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="domain">Custom Domain (Optional)</Label>
-                  <Input
-                    id="domain"
-                    value={newTenant.domain}
-                    onChange={(e) => setNewTenant({...newTenant, domain: e.target.value})}
-                    placeholder="app.clientbusiness.com"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Your client's branded domain where their customers will access the platform.
-                  </p>
-                  {newTenant.domain && newTenant.subdomain && (
-                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded">
-                      <strong className="text-green-800 text-sm">📋 DNS Setup Instructions for Your Client:</strong>
-                      <div className="mt-2 bg-white p-2 rounded border text-xs font-mono">
-                        <div>Type: <strong>CNAME</strong></div>
-                        <div>Name: <strong>{newTenant.domain.split('.')[0]}</strong></div>
-                        <div>Value: <strong>{newTenant.subdomain}.xauti-platform.replit.app</strong></div>
-                        <div>TTL: <strong>300</strong></div>
-                      </div>
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                        <strong className="text-blue-800">Your client points their domain:</strong>
-                        <div className="mt-1 text-blue-700">
-                          <strong>{newTenant.domain}</strong> → <strong>{newTenant.subdomain}.xauti-platform.replit.app</strong>
-                        </div>
-                        <p className="text-blue-600 mt-1">
-                          They add this CNAME record in their domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subdomain">Platform Subdomain</Label>
-                  <Input
-                    id="subdomain"
-                    value={newTenant.subdomain}
-                    onChange={(e) => setNewTenant({...newTenant, subdomain: e.target.value})}
-                    placeholder="acme"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Temporary URL: {newTenant.subdomain || 'client'}.xauti-platform.replit.app
-                    <br/>Your client uses this before setting up their custom domain.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input
-                    id="companyName"
-                    value={newTenant.companyName}
-                    onChange={(e) => setNewTenant({...newTenant, companyName: e.target.value})}
-                    placeholder="Acme Marketing"
-                  />
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly Revenue</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-600">
+                    ${((tenants?.filter((t: Tenant) => t.isActive).length || 0) * 199).toLocaleString()}
+                  </div>
+                </CardContent>
+              </Card>
 
-              <Separator />
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Branding Configuration</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="primaryColor">Primary Color</Label>
-                    <Input
-                      id="primaryColor"
-                      type="color"
-                      value={newTenant.primaryColor}
-                      onChange={(e) => setNewTenant({...newTenant, primaryColor: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="logo">Logo URL</Label>
-                    <Input
-                      id="logo"
-                      value={newTenant.logo}
-                      onChange={(e) => setNewTenant({...newTenant, logo: e.target.value})}
-                      placeholder="https://example.com/logo.png"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">API Integrations</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="n8nWebhookUrl">n8n Webhook URL</Label>
-                    <Input
-                      id="n8nWebhookUrl"
-                      value={newTenant.n8nWebhookUrl}
-                      onChange={(e) => setNewTenant({...newTenant, n8nWebhookUrl: e.target.value})}
-                      placeholder="https://client-n8n.com/webhook/content"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="stripeSecretKey">Stripe Secret Key</Label>
-                    <Input
-                      id="stripeSecretKey"
-                      type="password"
-                      value={newTenant.stripeSecretKey}
-                      onChange={(e) => setNewTenant({...newTenant, stripeSecretKey: e.target.value})}
-                      placeholder="sk_live_..."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Get your keys at{" "}
-                      <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                        dashboard.stripe.com/apikeys
-                      </a>
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="stripePublicKey">Stripe Public Key</Label>
-                    <Input
-                      id="stripePublicKey"
-                      value={newTenant.stripePublicKey}
-                      onChange={(e) => setNewTenant({...newTenant, stripePublicKey: e.target.value})}
-                      placeholder="pk_live_..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="openaiApiKey">OpenAI API Key</Label>
-                    <Input
-                      id="openaiApiKey"
-                      type="password"
-                      value={newTenant.openaiApiKey}
-                      onChange={(e) => setNewTenant({...newTenant, openaiApiKey: e.target.value})}
-                      placeholder="sk-..."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Get your API key at{" "}
-                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                        platform.openai.com/api-keys
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex-col space-y-4">
-              {/* Cost Breakdown Section */}
-              <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                <h4 className="font-semibold text-blue-900 mb-2">💰 Monthly Operating Costs (Your Brand Responsibility)</h4>
-                
-                <div className="space-y-3">
-                  <div>
-                    <strong className="text-blue-800">OpenAI API Costs:</strong>
-                    <ul className="text-blue-700 ml-4 mt-1">
-                      <li>• Content calendar: $0.50-2.00 per generation (~1,000-3,000 tokens)</li>
-                      <li>• Script generation: $0.75-3.00 per generation (~1,500-4,000 tokens)</li>
-                      <li>• Brand tone analysis: $0.25-1.00 per analysis (~500-1,500 tokens)</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <strong className="text-blue-800">What are tokens?</strong>
-                    <p className="text-blue-700 ml-4">Think of tokens like "words" - about 4 characters each. A 30-day content calendar uses roughly 1,000-3,000 tokens to generate.</p>
-                  </div>
-                  
-                  <div>
-                    <strong className="text-blue-800">Other Monthly Costs:</strong>
-                    <ul className="text-blue-700 ml-4 mt-1">
-                      <li>• n8n workflow platform: $19-39/month</li>
-                      <li>• Stripe processing: 2.9% + $0.30 per transaction</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="bg-green-100 p-3 rounded border-green-300 border">
-                    <strong className="text-green-800 text-sm">💰 Profit Examples (at $100/month per client):</strong>
-                    <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                      <div>
-                        <div className="font-semibold text-green-700">5 clients: $500 revenue</div>
-                        <div className="text-green-600">- $35 costs = $465 profit (93%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">10 clients: $1,000 revenue</div>
-                        <div className="text-green-600">- $55 costs = $945 profit (95%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">15 clients: $1,500 revenue</div>
-                        <div className="text-green-600">- $75 costs = $1,425 profit (95%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">20 clients: $2,000 revenue</div>
-                        <div className="text-green-600">- $95 costs = $1,905 profit (95%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">25 clients: $2,500 revenue</div>
-                        <div className="text-green-600">- $115 costs = $2,385 profit (95%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">30 clients: $3,000 revenue</div>
-                        <div className="text-green-600">- $135 costs = $2,865 profit (96%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">40 clients: $4,000 revenue</div>
-                        <div className="text-green-600">- $175 costs = $3,825 profit (96%)</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-green-700">50 clients: $5,000 revenue</div>
-                        <div className="text-green-600">- $215 costs = $4,785 profit (96%)</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleCreateTenant}
-                disabled={createTenantMutation.isPending}
-                className="w-full"
-              >
-                {createTenantMutation.isPending ? "Creating..." : "Create White Label Client"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="manage" className="space-y-6">
-          {tenantsLoading ? (
-            <div>Loading tenants...</div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6">
-              {tenants?.map((tenant: Tenant) => (
-                <Card key={tenant.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{tenant.name}</CardTitle>
-                        <CardDescription>
-                          {tenant.subdomain}.yourdomain.com | {tenant.domain}
-                        </CardDescription>
-                      </div>
-                      <Badge variant={tenant.isActive ? "default" : "secondary"}>
-                        {tenant.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="font-medium">n8n Connected</p>
-                        <p className="text-muted-foreground">
-                          {tenant.n8nWebhookUrl ? "Yes" : "No"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Stripe Connected</p>
-                        <p className="text-muted-foreground">
-                          {tenant.stripeSecretKey ? "Yes" : "No"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium">OpenAI Connected</p>
-                        <p className="text-muted-foreground">
-                          {tenant.openaiApiKey ? "Yes" : "No"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Plan</p>
-                        <p className="text-muted-foreground">{tenant.plan}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        Edit Configuration
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        View Analytics
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Manage Users
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profit Margin</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-600">94%</div>
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+
+          <TabsContent value="create">
+            <Card>
+              <CardHeader>
+                <CardTitle>Setup New White Label Client</CardTitle>
+                <CardDescription>
+                  Each client gets their own branded platform with isolated login system
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="companyName">Company Name *</Label>
+                    <Input
+                      id="companyName"
+                      value={newTenant.companyName}
+                      onChange={(e) => setNewTenant({ ...newTenant, companyName: e.target.value })}
+                      placeholder="Marketing Pro Agency"
+                    />
+                    {newTenant.companyName && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Platform: {generateSubdomain(newTenant.companyName)}.xauti-platform.replit.app
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="customDomain">Custom Domain (Optional)</Label>
+                    <Input
+                      id="customDomain"
+                      value={newTenant.customDomain}
+                      onChange={(e) => setNewTenant({ ...newTenant, customDomain: e.target.value })}
+                      placeholder="app.clientbusiness.com"
+                    />
+                    {newTenant.customDomain && newTenant.companyName && (
+                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">DNS Setup</p>
+                        <code className="block mt-1 text-xs bg-blue-100 dark:bg-blue-800 p-2 rounded">
+                          CNAME: {newTenant.customDomain} → {generateSubdomain(newTenant.companyName)}.xauti-platform.replit.app
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Client API Keys</h4>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="n8nWebhookUrl">n8n Webhook URL</Label>
+                      <Input
+                        id="n8nWebhookUrl"
+                        value={newTenant.n8nWebhookUrl}
+                        onChange={(e) => setNewTenant({ ...newTenant, n8nWebhookUrl: e.target.value })}
+                        placeholder="https://n8n.example.com/webhook"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="n8nApiKey">n8n API Key</Label>
+                      <Input
+                        id="n8nApiKey"
+                        type="password"
+                        value={newTenant.n8nApiKey}
+                        onChange={(e) => setNewTenant({ ...newTenant, n8nApiKey: e.target.value })}
+                        placeholder="n8n-api-key"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="stripePublicKey">Stripe Public Key</Label>
+                      <Input
+                        id="stripePublicKey"
+                        value={newTenant.stripePublicKey}
+                        onChange={(e) => setNewTenant({ ...newTenant, stripePublicKey: e.target.value })}
+                        placeholder="pk_live_..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="stripeSecretKey">Stripe Secret Key</Label>
+                      <Input
+                        id="stripeSecretKey"
+                        type="password"
+                        value={newTenant.stripeSecretKey}
+                        onChange={(e) => setNewTenant({ ...newTenant, stripeSecretKey: e.target.value })}
+                        placeholder="sk_live_..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="stripeWebhookSecret">Stripe Webhook Secret</Label>
+                      <Input
+                        id="stripeWebhookSecret"
+                        type="password"
+                        value={newTenant.stripeWebhookSecret}
+                        onChange={(e) => setNewTenant({ ...newTenant, stripeWebhookSecret: e.target.value })}
+                        placeholder="whsec_..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="openaiApiKey">OpenAI API Key</Label>
+                      <Input
+                        id="openaiApiKey"
+                        type="password"
+                        value={newTenant.openaiApiKey}
+                        onChange={(e) => setNewTenant({ ...newTenant, openaiApiKey: e.target.value })}
+                        placeholder="sk-proj-..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
+                  <h4 className="font-semibold mb-2">What Each Client Gets:</h4>
+                  <ul className="text-sm space-y-1">
+                    <li>• Their own branded login page for customers</li>
+                    <li>• Completely isolated user database</li>
+                    <li>• Custom domain support</li>
+                    <li>• Independent payment processing</li>
+                    <li>• Full control over customer pricing</li>
+                  </ul>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={handleCreateTenant} 
+                  disabled={createTenantMutation.isPending}
+                  className="w-full"
+                >
+                  {createTenantMutation.isPending ? "Creating..." : "Create White Label Client"}
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manage">
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Clients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tenantsLoading ? (
+                  <div>Loading...</div>
+                ) : !tenants || tenants.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No clients created yet</p>
+                    <Button 
+                      onClick={() => setActiveTab("create")} 
+                      className="mt-4"
+                    >
+                      Create First Client
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tenants?.map((tenant: Tenant) => (
+                      <div key={tenant.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">{tenant.brandingConfig?.companyName || tenant.name}</h3>
+                            <p className="text-sm text-gray-600">
+                              {tenant.subdomain}.xauti-platform.replit.app
+                            </p>
+                            {tenant.domain && (
+                              <p className="text-sm text-blue-600">{tenant.domain}</p>
+                            )}
+                          </div>
+                          <Badge variant={tenant.isActive ? "default" : "secondary"}>
+                            {tenant.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        <div className="mt-3">
+                          <Button size="sm" variant="outline">
+                            View Platform
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
