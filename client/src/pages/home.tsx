@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, Trophy, User, LogOut, Sparkles } from "lucide-react";
+import { Calendar, Trophy, User, LogOut, Sparkles, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FormData {
