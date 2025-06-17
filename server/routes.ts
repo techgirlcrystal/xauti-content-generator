@@ -1550,6 +1550,46 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     res.json({received: true});
   });
 
+  // Manual fix for missing generations (admin only)
+  app.post("/api/admin/fix-generations", async (req, res) => {
+    try {
+      const { userEmail, generationType, count } = req.body;
+      
+      if (!userEmail || !generationType || !count) {
+        return res.status(400).json({ error: "Email, generation type, and count are required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(userEmail);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Add generations to user's account
+      await storage.addGenerationsToUser(user.id, parseInt(count));
+      
+      // Record the manual addition
+      await storage.createGenerationPurchase({
+        userId: user.id,
+        generationsAdded: parseInt(count),
+        amountPaid: 0, // Manual addition
+        stripePaymentIntentId: null,
+        paymentStatus: "manual_addition"
+      });
+
+      console.log(`Manually added ${count} ${generationType} generations to user ${userEmail}`);
+
+      res.json({
+        success: true,
+        message: `Added ${count} ${generationType} generations to ${userEmail}`,
+        user: await storage.getUser(user.id)
+      });
+    } catch (error: any) {
+      console.error('Manual generation fix error:', error);
+      res.status(500).json({ error: "Failed to add generations" });
+    }
+  });
+
   // Get checkout URL for session
   app.post("/api/get-checkout-url", async (req, res) => {
     if (!stripe) {
