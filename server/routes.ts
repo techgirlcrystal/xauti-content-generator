@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import { insertTenantSchema } from "@shared/schema";
+import { promises as dns } from "dns";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -258,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const dns = require('dns').promises;
+
       
       try {
         // Check CNAME records
