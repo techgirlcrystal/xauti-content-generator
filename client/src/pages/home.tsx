@@ -227,7 +227,7 @@ export default function Home() {
       {/* Header with user info and streak */}
       <div className="max-w-4xl mx-auto mb-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
             <div className="flex items-center space-x-4">
               <div className="bg-blue-100 p-3 rounded-full">
                 <User className="h-6 w-6 text-blue-600" />
@@ -237,62 +237,68 @@ export default function Home() {
                 <p className="text-gray-600">{user.email}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-6">
-              <div className="text-center">
-                <div className="flex items-center space-x-2 mb-1">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  <span className="text-2xl font-bold text-gray-900">{user.contentStreak || 0}</span>
-                </div>
-                <p className="text-sm text-gray-600">Content Streak</p>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center space-x-2 mb-1">
-                  <Calendar className="h-5 w-5 text-blue-500" />
-                  <span className="text-lg font-semibold text-gray-900">Day {user.contentStreak || 1}</span>
-                </div>
-                <p className="text-sm text-gray-600">of 30</p>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center space-x-2 mb-1">
-                  <Sparkles className="h-5 w-5 text-green-500" />
-                  <span className="text-xl font-bold text-gray-900">
-                    {user.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (user.generationsLimit || 0) - (user.generationsUsed || 0))}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  {user.subscriptionTier === 'unlimited' ? 'Unlimited' : 'Left This Month'}
-                </p>
-              </div>
-              {user.subscriptionEndDate && (
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex items-center space-x-4">
                 <div className="text-center">
                   <div className="flex items-center space-x-2 mb-1">
-                    <Calendar className="h-5 w-5 text-purple-500" />
-                    <span className="text-sm font-semibold text-gray-900">
-                      {new Date(user.subscriptionEndDate).toLocaleDateString()}
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="text-2xl font-bold text-gray-900">{user.contentStreak || 0}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Content Streak</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Calendar className="h-5 w-5 text-blue-500" />
+                    <span className="text-lg font-semibold text-gray-900">Day {user.contentStreak || 1}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">of 30</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Sparkles className="h-5 w-5 text-green-500" />
+                    <span className="text-xl font-bold text-gray-900">
+                      {user.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (user.generationsLimit || 0) - (user.generationsUsed || 0))}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">Plan Renews</p>
+                  <p className="text-sm text-gray-600">
+                    {user.subscriptionTier === 'unlimited' ? 'Unlimited' : 'Left This Month'}
+                  </p>
                 </div>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => navigate("/history")}
-                className="mr-3"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                History
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/settings")}
-                className="mr-3"
-              >
-                Settings
-              </Button>
-              <Button variant="outline" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+                {user.subscriptionEndDate && (
+                  <div className="text-center">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Calendar className="h-5 w-5 text-purple-500" />
+                      <span className="text-sm font-semibold text-gray-900">
+                        {new Date(user.subscriptionEndDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">Plan Renews</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/history")}
+                  size="sm"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  History
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/settings")}
+                  size="sm"
+                >
+                  Settings
+                </Button>
+                <Button variant="outline" onClick={handleSignOut} size="sm">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
         </div>
