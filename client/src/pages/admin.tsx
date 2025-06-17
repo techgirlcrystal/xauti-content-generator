@@ -67,7 +67,10 @@ export default function Admin() {
   // Create tenant mutation
   // Delete tenant mutation
   const deleteTenantMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/tenants/${id}`),
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/tenants/${id}`);
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Client Deleted",
@@ -407,7 +410,13 @@ export default function Admin() {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => window.open(`https://${tenant.subdomain}.xauti-platform.replit.app`, '_blank')}
+                            onClick={() => {
+                              // Use custom domain if available, otherwise use the main platform with subdomain detection
+                              const url = tenant.domain 
+                                ? `https://${tenant.domain}` 
+                                : `${window.location.protocol}//${window.location.host}?tenant=${tenant.subdomain}`;
+                              window.open(url, '_blank');
+                            }}
                           >
                             Visit Platform
                           </Button>

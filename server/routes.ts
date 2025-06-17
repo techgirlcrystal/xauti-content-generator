@@ -29,6 +29,29 @@ const tenantMiddleware = async (req: TenantRequest, res: Response, next: NextFun
     const host = req.get('host') || '';
     console.log('Tenant middleware - Host:', host, 'Path:', req.path);
     
+    // Check for tenant query parameter (for testing from admin panel)
+    const tenantParam = req.query.tenant as string;
+    if (tenantParam) {
+      console.log('Using tenant from query parameter:', tenantParam);
+      const tenant = await storage.getTenantBySubdomain(tenantParam);
+      if (tenant && tenant.isActive) {
+        console.log('Found tenant via query param:', tenant.name);
+        req.tenant = tenant;
+        
+        // Initialize tenant-specific API clients
+        if (tenant.stripeSecretKey) {
+          req.tenantStripe = new Stripe(tenant.stripeSecretKey);
+        }
+        
+        if (tenant.openaiApiKey) {
+          req.tenantOpenAI = new OpenAI({
+            apiKey: tenant.openaiApiKey,
+          });
+        }
+      }
+      return next();
+    }
+    
     // Always skip tenant detection for development environments and admin routes
     if (req.path.startsWith('/api/admin') || 
         host.includes('localhost') || 
