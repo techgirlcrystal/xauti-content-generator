@@ -246,6 +246,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DNS checker endpoint
+  app.post("/api/admin/check-dns", async (req, res) => {
+    try {
+      const { domain, expectedTarget } = req.body;
+      
+      // Simple DNS check by attempting to resolve the domain
+      const dns = require('dns').promises;
+      
+      try {
+        const records = await dns.resolveCname(domain);
+        const isCorrect = records.some(record => record.includes(expectedTarget));
+        
+        res.json({
+          domain,
+          status: isCorrect ? 'configured' : 'misconfigured',
+          records,
+          expectedTarget,
+          message: isCorrect 
+            ? 'DNS correctly configured'
+            : `CNAME should point to ${expectedTarget}`
+        });
+      } catch (dnsError: any) {
+        // Try A record as fallback
+        try {
+          await dns.resolve4(domain);
+          res.json({
+            domain,
+            status: 'different_config',
+            message: 'Domain resolves but not using CNAME record',
+            expectedTarget
+          });
+        } catch {
+          res.json({
+            domain,
+            status: 'not_configured',
+            message: 'Domain does not resolve - DNS not configured yet',
+            expectedTarget
+          });
+        }
+      }
+    } catch (error: any) {
+      res.status(500).json({ 
+        error: "DNS check failed", 
+        message: error.message 
+      });
+    }
+  });
+
   // Basic test endpoint
   app.post("/api/basic-test", (req, res) => {
     res.json({ success: true, message: "Basic POST endpoint working", body: req.body });

@@ -98,6 +98,14 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 16, 2025: Complete DNS Management and Verification System
+  - Added comprehensive DNS setup guidance with downloadable client instructions
+  - Implemented real-time DNS checker to verify custom domain configuration
+  - Fixed guide download functionality with client-specific setup instructions
+  - Enhanced admin interface with Copy DNS Setup, Download Guide, and Check DNS buttons
+  - DNS checker validates CNAME records and provides clear status feedback
+  - Streamlined client onboarding with complete DNS management tools
+
 - June 16, 2025: Admin Panel Delete Functionality and Platform Testing
   - Added working delete functionality for removing duplicate white label clients
   - Fixed tenant query parameter support for testing client platforms from admin panel

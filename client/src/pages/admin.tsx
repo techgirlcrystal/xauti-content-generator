@@ -87,6 +87,35 @@ export default function Admin() {
     },
   });
 
+  // DNS check mutation
+  const checkDnsMutation = useMutation({
+    mutationFn: async ({ domain, expectedTarget }: { domain: string; expectedTarget: string }) => {
+      const response = await apiRequest("POST", "/api/admin/check-dns", { domain, expectedTarget });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const statusMessages = {
+        configured: "DNS is correctly configured!",
+        misconfigured: `DNS misconfigured. ${data.message}`,
+        different_config: "Domain resolves but not using CNAME record",
+        not_configured: "DNS not configured yet - domain doesn't resolve"
+      };
+      
+      toast({
+        title: "DNS Check Complete",
+        description: statusMessages[data.status] || data.message,
+        variant: data.status === 'configured' ? "default" : "destructive",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "DNS Check Failed",
+        description: error.message || "Could not check DNS status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const createTenantMutation = useMutation({
     mutationFn: (tenant: CreateTenantForm) => {
       // Generate unique subdomain from company name
@@ -481,10 +510,111 @@ Need help? Forward these instructions to your client.`;
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => {
-                                  window.open(`${window.location.origin}/DNS_SETUP_GUIDE.md`, '_blank');
+                                  // Create and download the DNS guide as a text file
+                                  const guideContent = `DNS Setup Guide for White Label Clients
+
+## Quick Start
+Your branded content generation platform is ready! You have two options:
+
+### Option 1: Use Platform URL (Immediate, SSL Included)
+Your platform is live at: ${tenant.subdomain}.xauti-platform.replit.app
+- ✅ Works immediately
+- ✅ SSL certificate included  
+- ✅ No setup required
+
+### Option 2: Custom Domain Setup
+To use your custom domain: ${tenant.domain}
+
+## DNS Configuration Steps
+
+### 1. Access Your Domain Provider
+Log into your domain registrar or DNS provider:
+- GoDaddy, Namecheap, Cloudflare, Route 53, NameSilo, Others
+
+### 2. Create CNAME Record
+Add a new DNS record with these details:
+
+Type: CNAME
+Name: ${tenant.domain}
+Value: ${tenant.subdomain}.xauti-platform.replit.app
+TTL: 300 (or leave default)
+
+### 3. Common Provider Instructions
+
+#### GoDaddy:
+1. Go to "My Products" → "DNS"
+2. Click "Add" → "CNAME"
+3. Host: @ (for root domain) or subdomain
+4. Points to: ${tenant.subdomain}.xauti-platform.replit.app
+
+#### Namecheap:
+1. Go to "Domain List" → "Manage"
+2. Click "Advanced DNS"
+3. Add Record → CNAME
+4. Host: @ or subdomain
+5. Value: ${tenant.subdomain}.xauti-platform.replit.app
+
+#### Cloudflare:
+1. Go to "DNS" → "Records"
+2. Add record → CNAME
+3. Name: @ or subdomain
+4. Target: ${tenant.subdomain}.xauti-platform.replit.app
+5. Proxy status: Orange cloud (for SSL)
+
+### 4. SSL Certificate Options
+
+#### Option A: Use Cloudflare (Recommended)
+1. Transfer DNS to Cloudflare (free)
+2. Enable "Full" SSL mode
+3. SSL certificate is automatic
+
+#### Option B: Platform URL
+Continue using ${tenant.subdomain}.xauti-platform.replit.app - it has built-in SSL
+
+## Verification
+1. Wait 24-48 hours for full propagation
+2. Test at: https://dnschecker.org
+3. Verify CNAME points to ${tenant.subdomain}.xauti-platform.replit.app
+
+## Troubleshooting
+
+### Common Issues
+- "This site can't be reached": DNS not propagated yet (wait 24-48 hours)
+- "Not Secure" warning: Use Cloudflare for free SSL or use platform URL
+
+Your platform is completely isolated and you control all customer data and revenue.`;
+
+                                  // Create blob and download
+                                  const blob = new Blob([guideContent], { type: 'text/plain' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `DNS-Setup-Guide-${tenant.brandingConfig?.companyName || tenant.name}.txt`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+                                  
+                                  toast({
+                                    title: "Guide Downloaded",
+                                    description: "DNS setup guide saved to your downloads",
+                                  });
                                 }}
                               >
-                                View Full Guide
+                                Download Guide
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="default"
+                                onClick={() => {
+                                  checkDnsMutation.mutate({
+                                    domain: tenant.domain,
+                                    expectedTarget: `${tenant.subdomain}.xauti-platform.replit.app`
+                                  });
+                                }}
+                                disabled={checkDnsMutation.isPending}
+                              >
+                                {checkDnsMutation.isPending ? "Checking..." : "Check DNS"}
                               </Button>
                             </>
                           )}
