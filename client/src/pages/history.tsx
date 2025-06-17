@@ -300,122 +300,132 @@ export default function History() {
             
             {contentRequests.map((request) => (
               <Card key={request.id} className="shadow-sm border-gray-200">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-[hsl(24,95%,53%)] rounded-lg flex items-center justify-center">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 bg-[hsl(24,95%,53%)] rounded-lg flex items-center justify-center flex-shrink-0">
                         <FileText className="w-4 h-4 text-white" />
                       </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-900 capitalize">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base font-semibold text-gray-900 capitalize truncate">
                           {request.industry}
                         </CardTitle>
-                        <CardDescription className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Calendar className="w-3 h-3" />
-                          <span>Created {formatDate(request.createdAt)}</span>
+                        <CardDescription className="text-xs text-gray-600 mt-1">
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">Created {formatDate(request.createdAt)}</span>
+                          </div>
                           {request.completedAt && (
-                            <>
-                              <span>•</span>
-                              <span>Completed {formatDate(request.completedAt)}</span>
-                            </>
+                            <div className="flex items-center space-x-1 mt-0.5">
+                              <CheckCircle className="w-3 h-3 flex-shrink-0 text-green-600" />
+                              <span className="truncate">Completed {formatDate(request.completedAt)}</span>
+                            </div>
                           )}
                         </CardDescription>
                       </div>
                     </div>
-                    {getStatusBadge(request.status)}
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(request.status)}
+                    </div>
                   </div>
                 </CardHeader>
                 
-                <CardContent>
+                <CardContent className="pt-0 space-y-3">
                   {/* Topics */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Topics Covered</h4>
-                    <div className="flex flex-wrap gap-2">
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-700 mb-2">Topics Covered</h4>
+                    <div className="flex flex-wrap gap-1.5">
                       {Array.isArray(request.selectedTopics) 
                         ? request.selectedTopics.map((topic, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                            <Badge key={index} variant="outline" className="text-xs px-2 py-0.5">
                               {topic}
                             </Badge>
                           ))
-                        : <Badge variant="outline" className="text-xs">No topics available</Badge>
+                        : <Badge variant="outline" className="text-xs px-2 py-0.5">No topics available</Badge>
                       }
                     </div>
                   </div>
 
                   {/* Custom Branding Info */}
                   {(request.brandTone || request.callToAction) && (
-                    <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded">
-                      <h4 className="text-sm font-medium text-purple-900 mb-2">Custom Branding</h4>
-                      {request.brandTone && (
-                        <p className="text-xs text-purple-700 mb-1">
-                          <strong>Brand Tone:</strong> {request.brandTone.substring(0, 100)}...
-                        </p>
-                      )}
-                      {request.callToAction && (
-                        <p className="text-xs text-purple-700">
-                          <strong>Call to Action:</strong> {request.callToAction}
-                        </p>
-                      )}
+                    <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-md">
+                      <h4 className="text-xs font-medium text-purple-900 mb-1.5">Custom Branding</h4>
+                      <div className="space-y-1">
+                        {request.brandTone && (
+                          <p className="text-xs text-purple-700">
+                            <span className="font-medium">Tone:</span> {request.brandTone.substring(0, 80)}...
+                          </p>
+                        )}
+                        {request.callToAction && (
+                          <p className="text-xs text-purple-700">
+                            <span className="font-medium">CTA:</span> {request.callToAction}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
                   {/* Download Actions */}
                   {request.status === 'completed' && (
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        onClick={() => downloadContent(request)}
-                        className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white font-medium"
-                        disabled={!request.csvBase64}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download Content
-                      </Button>
-                      
-                      {request.scriptContent && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
                         <Button
-                          onClick={() => downloadScripts(request)}
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium"
+                          onClick={() => downloadContent(request)}
+                          className="flex-1 bg-[hsl(24,95%,53%)] hover:bg-[hsl(24,95%,47%)] text-white text-sm py-2"
+                          disabled={!request.csvBase64}
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Scripts
+                          <Download className="w-3 h-3 mr-1.5" />
+                          Content
                         </Button>
-                      )}
+                        
+                        {request.scriptContent && (
+                          <Button
+                            onClick={() => downloadScripts(request)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2"
+                          >
+                            <Download className="w-3 h-3 mr-1.5" />
+                            Scripts
+                          </Button>
+                        )}
+                      </div>
                       
                       <Button
                         onClick={() => deleteContentRequest(request.id)}
                         variant="outline"
-                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        size="sm"
+                        className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 text-xs py-1.5"
                         disabled={deletingId === request.id}
                       >
                         {deletingId === request.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                         ) : (
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="w-3 h-3 mr-1.5" />
                         )}
-                        Delete
+                        Delete Request
                       </Button>
                     </div>
                   )}
 
                   {/* Failed Status */}
                   {request.status === 'failed' && (
-                    <div className="space-y-3">
-                      <Alert className="bg-red-50 border-red-200">
-                        <XCircle className="w-4 h-4 text-red-600" />
-                        <AlertDescription className="text-red-800">
-                          This generation failed to complete. You can try generating new content from the home page.
+                    <div className="space-y-2">
+                      <Alert className="bg-red-50 border-red-200 py-2">
+                        <XCircle className="w-3 h-3 text-red-600" />
+                        <AlertDescription className="text-red-800 text-xs">
+                          Generation failed. Try creating new content from the home page.
                         </AlertDescription>
                       </Alert>
                       <Button
                         onClick={() => deleteContentRequest(request.id)}
                         variant="outline"
-                        className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        size="sm"
+                        className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 text-xs py-1.5"
                         disabled={deletingId === request.id}
                       >
                         {deletingId === request.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                         ) : (
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="w-3 h-3 mr-1.5" />
                         )}
                         Remove Failed Request
                       </Button>
@@ -424,25 +434,26 @@ export default function History() {
 
                   {/* Processing Status */}
                   {request.status === 'processing' && (
-                    <div className="space-y-3">
-                      <Alert className="bg-blue-50 border-blue-200">
-                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                        <AlertDescription className="text-blue-800">
-                          This generation is still in progress. Check back in a few minutes.
+                    <div className="space-y-2">
+                      <Alert className="bg-blue-50 border-blue-200 py-2">
+                        <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
+                        <AlertDescription className="text-blue-800 text-xs">
+                          Generation in progress. Check back in a few minutes.
                         </AlertDescription>
                       </Alert>
                       <Button
                         onClick={() => deleteContentRequest(request.id)}
                         variant="outline"
-                        className="w-full border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800"
+                        size="sm"
+                        className="w-full border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 text-xs py-1.5"
                         disabled={deletingId === request.id}
                       >
                         {deletingId === request.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                         ) : (
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="w-3 h-3 mr-1.5" />
                         )}
-                        Cancel Processing Request
+                        Cancel Request
                       </Button>
                     </div>
                   )}
