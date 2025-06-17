@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, ArrowLeft, Calendar, FileText, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Download, ArrowLeft, Calendar, FileText, Clock, CheckCircle, XCircle, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentRequest {
@@ -35,6 +35,7 @@ export default function History() {
   const [user, setUser] = useState<User | null>(null);
   const [contentRequests, setContentRequests] = useState<ContentRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     // Check for user authentication
@@ -151,6 +152,43 @@ export default function History() {
         description: "Failed to download script file. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const deleteContentRequest = async (requestId: number) => {
+    if (!user) return;
+    
+    setDeletingId(requestId);
+    
+    try {
+      const response = await fetch(`/api/content-request/${requestId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete content request');
+      }
+
+      // Remove from local state
+      setContentRequests(prev => prev.filter(req => req.id !== requestId));
+      
+      toast({
+        title: "Deleted",
+        description: "Content request has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Delete Error",
+        description: "Failed to delete content request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 

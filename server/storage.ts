@@ -28,6 +28,7 @@ export interface IStorage {
   getContentRequest(id: number, tenantId?: number): Promise<ContentRequest | undefined>;
   updateContentRequest(id: number, updates: Partial<ContentRequest>): Promise<ContentRequest>;
   getContentRequestsByUserId(userId: number, tenantId?: number): Promise<ContentRequest[]>;
+  deleteContentRequest(id: number, userId: number): Promise<void>;
   
   // Generation purchases (tenant-aware)
   createGenerationPurchase(purchase: InsertGenerationPurchase): Promise<GenerationPurchase>;
@@ -156,6 +157,13 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query;
+  }
+
+  async deleteContentRequest(id: number, userId: number): Promise<void> {
+    // Ensure only the owner can delete their content request
+    await db
+      .delete(contentRequests)
+      .where(and(eq(contentRequests.id, id), eq(contentRequests.userId, userId)));
   }
 
   async updateUserSubscription(id: number, subscription: Partial<User>): Promise<User> {

@@ -1747,6 +1747,28 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
     }
   });
 
+  // Delete content request
+  app.delete("/api/content-request/:requestId", async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+      
+      await storage.deleteContentRequest(parseInt(requestId), userId);
+      
+      res.json({
+        success: true,
+        message: "Content request deleted successfully"
+      });
+    } catch (error: any) {
+      console.error('Delete content request error:', error);
+      res.status(500).json({ error: "Failed to delete content request" });
+    }
+  });
+
   // Get user subscription and usage info
   app.get("/api/subscription/status/:userId", async (req, res) => {
     try {
