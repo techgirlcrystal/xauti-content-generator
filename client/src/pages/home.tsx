@@ -276,6 +276,14 @@ export default function Home() {
               )}
               <Button
                 variant="outline"
+                onClick={() => navigate("/history")}
+                className="mr-3"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                History
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => navigate("/settings")}
                 className="mr-3"
               >
