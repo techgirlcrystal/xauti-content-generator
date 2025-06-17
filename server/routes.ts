@@ -6,6 +6,8 @@ import OpenAI from "openai";
 import Stripe from "stripe";
 import { insertTenantSchema } from "@shared/schema";
 import { promises as dns } from "dns";
+import https from "https";
+import http from "http";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
