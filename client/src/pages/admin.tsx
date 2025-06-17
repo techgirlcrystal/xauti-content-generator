@@ -90,11 +90,19 @@ export default function Admin() {
   // DNS check mutation
   const checkDnsMutation = useMutation({
     mutationFn: async ({ domain, expectedTarget }: { domain: string; expectedTarget: string }) => {
-      const response = await apiRequest("POST", "/api/admin/check-dns", { domain, expectedTarget });
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/api/admin/check-dns", { domain, expectedTarget });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return await response.json();
+      } catch (error: any) {
+        console.error('DNS check error:', error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
-      const statusMessages = {
+      const statusMessages: Record<string, string> = {
         configured: "DNS is correctly configured!",
         misconfigured: `DNS misconfigured. ${data.message}`,
         different_config: "Domain resolves but not using CNAME record",
@@ -103,11 +111,12 @@ export default function Admin() {
       
       toast({
         title: "DNS Check Complete",
-        description: statusMessages[data.status] || data.message,
+        description: statusMessages[data.status] || data.message || "Check completed",
         variant: data.status === 'configured' ? "default" : "destructive",
       });
     },
     onError: (error: any) => {
+      console.error('DNS mutation error:', error);
       toast({
         title: "DNS Check Failed",
         description: error.message || "Could not check DNS status",

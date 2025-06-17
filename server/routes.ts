@@ -251,14 +251,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { domain, expectedTarget } = req.body;
       
-      // Simple DNS check by attempting to resolve the domain
+      if (!domain || !expectedTarget) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Domain and expectedTarget are required"
+        });
+      }
+      
       const dns = require('dns').promises;
       
       try {
+        // Check CNAME records
         const records = await dns.resolveCname(domain);
-        const isCorrect = records.some(record => record.includes(expectedTarget));
+        const isCorrect = records.some((record: string) => record.includes(expectedTarget.replace('https://', '').replace('http://', '')));
         
-        res.json({
+        return res.json({
           domain,
           status: isCorrect ? 'configured' : 'misconfigured',
           records,
@@ -270,15 +277,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (dnsError: any) {
         // Try A record as fallback
         try {
-          await dns.resolve4(domain);
-          res.json({
+          const aRecords = await dns.resolve4(domain);
+          return res.json({
             domain,
             status: 'different_config',
             message: 'Domain resolves but not using CNAME record',
-            expectedTarget
+            expectedTarget,
+            records: aRecords
           });
         } catch {
-          res.json({
+          return res.json({
             domain,
             status: 'not_configured',
             message: 'Domain does not resolve - DNS not configured yet',
@@ -287,9 +295,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
     } catch (error: any) {
-      res.status(500).json({ 
+      console.error('DNS check error:', error);
+      return res.status(500).json({ 
         error: "DNS check failed", 
-        message: error.message 
+        message: error.message || "Unknown error occurred"
       });
     }
   });
