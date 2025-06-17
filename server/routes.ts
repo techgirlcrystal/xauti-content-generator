@@ -55,13 +55,39 @@ const tenantMiddleware = async (req: TenantRequest, res: Response, next: NextFun
       return next();
     }
     
-    // Always skip tenant detection for development environments and admin routes
-    if (req.path.startsWith('/api/admin') || 
-        host.includes('localhost') || 
+    // Skip tenant detection for admin routes only (not tenant API routes)
+    if (req.path.startsWith('/api/admin')) {
+      console.log('Skipping tenant detection for admin route:', req.path);
+      return next();
+    }
+    
+    // For development environments, still check for tenant parameter
+    if (host.includes('localhost') || 
         host.includes('replit.dev') ||
         host.includes('127.0.0.1') ||
         !host.includes('.')) {
-      console.log('Skipping tenant detection for:', host);
+      console.log('Development environment - checking for tenant param on:', req.path);
+      // If we have a tenant param but haven't processed it yet, try to find the tenant
+      const tenantParam = req.query.tenant as string;
+      if (tenantParam && !req.tenant) {
+        console.log('Finding tenant for development:', tenantParam);
+        const tenant = await storage.getTenantBySubdomain(tenantParam);
+        if (tenant && tenant.isActive) {
+          console.log('Found tenant for development:', tenant.name);
+          req.tenant = tenant;
+          
+          // Initialize tenant-specific API clients
+          if (tenant.stripeSecretKey) {
+            req.tenantStripe = new Stripe(tenant.stripeSecretKey);
+          }
+          
+          if (tenant.openaiApiKey) {
+            req.tenantOpenAI = new OpenAI({
+              apiKey: tenant.openaiApiKey,
+            });
+          }
+        }
+      }
       return next();
     }
     
