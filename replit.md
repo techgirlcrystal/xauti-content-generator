@@ -98,6 +98,13 @@ This is a full-stack web application built for generating content based on user-
 
 ## Recent Changes
 
+- June 16, 2025: Admin Panel Delete Functionality and Platform Testing
+  - Added working delete functionality for removing duplicate white label clients
+  - Fixed tenant query parameter support for testing client platforms from admin panel
+  - Enhanced admin interface with clear SSL status indicators for platform vs custom domains
+  - Successfully tested client deletion and platform access verification
+  - Clarified that platform subdomains have immediate SSL while custom domains need DNS setup
+
 - June 16, 2025: Multi-Tenant White Label System Implementation
   - Built complete tenant management system for $199 white label clients
   - Added isolated environments with tenant-specific n8n, Stripe, and OpenAI configurations

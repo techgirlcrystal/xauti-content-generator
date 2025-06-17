@@ -371,11 +371,21 @@ export default function Admin() {
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="font-semibold">{tenant.brandingConfig?.companyName || tenant.name}</h3>
-                            <p className="text-sm text-gray-600">
-                              Platform: {tenant.subdomain}.xauti-platform.replit.app
-                            </p>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <span>Platform:</span>
+                              <span className="font-mono text-green-600">{tenant.subdomain}.xauti-platform.replit.app</span>
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                Ready with SSL
+                              </Badge>
+                            </div>
                             {tenant.domain && (
-                              <p className="text-sm text-blue-600">Custom: {tenant.domain}</p>
+                              <div className="flex items-center gap-2 text-sm">
+                                <span>Custom:</span>
+                                <span className="font-mono text-amber-600">{tenant.domain}</span>
+                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                  Needs DNS Setup
+                                </Badge>
+                              </div>
                             )}
                             <p className="text-xs text-gray-500 mt-1">
                               Created: {new Date(tenant.createdAt).toLocaleDateString()}
