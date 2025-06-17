@@ -411,7 +411,9 @@ export default function Admin() {
                             <h3 className="font-semibold">{tenant.brandingConfig?.companyName || tenant.name}</h3>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <span>Platform:</span>
-                              <span className="font-mono text-green-600">{tenant.subdomain}.xauti-platform.replit.app</span>
+                              <span className="font-mono text-green-600">
+                                {window.location.origin}?tenant={tenant.subdomain}
+                              </span>
                               <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                                 Ready with SSL
                               </Badge>
@@ -428,7 +430,7 @@ export default function Admin() {
                                 <div className="ml-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
                                   <div className="font-medium text-blue-800 dark:text-blue-200 mb-1">DNS Instructions:</div>
                                   <div className="font-mono bg-blue-100 dark:bg-blue-800 p-1 rounded">
-                                    CNAME: {tenant.domain} → {tenant.subdomain}.xauti-platform.replit.app
+                                    CNAME: {tenant.domain} → {window.location.host}
                                   </div>
                                 </div>
                               </div>
@@ -484,13 +486,13 @@ export default function Admin() {
                                 onClick={() => {
                                   const dnsInstructions = `DNS Setup Instructions for ${tenant.brandingConfig?.companyName || tenant.name}
 
-Platform URL (Ready): ${tenant.subdomain}.xauti-platform.replit.app
+Platform URL (Ready): ${window.location.origin}?tenant=${tenant.subdomain}
 Custom Domain: ${tenant.domain}
 
 DNS Record Required:
 Type: CNAME
 Name: ${tenant.domain}
-Value: ${tenant.subdomain}.xauti-platform.replit.app
+Value: ${window.location.host}
 
 Steps:
 1. Log into your domain registrar (GoDaddy, Namecheap, etc.)
