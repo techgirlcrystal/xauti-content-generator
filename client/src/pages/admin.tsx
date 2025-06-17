@@ -379,12 +379,20 @@ export default function Admin() {
                               </Badge>
                             </div>
                             {tenant.domain && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <span>Custom:</span>
-                                <span className="font-mono text-amber-600">{tenant.domain}</span>
-                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                                  Needs DNS Setup
-                                </Badge>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span>Custom:</span>
+                                  <span className="font-mono text-amber-600">{tenant.domain}</span>
+                                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                    Needs DNS Setup
+                                  </Badge>
+                                </div>
+                                <div className="ml-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
+                                  <div className="font-medium text-blue-800 dark:text-blue-200 mb-1">DNS Instructions:</div>
+                                  <div className="font-mono bg-blue-100 dark:bg-blue-800 p-1 rounded">
+                                    CNAME: {tenant.domain} → {tenant.subdomain}.xauti-platform.replit.app
+                                  </div>
+                                </div>
                               </div>
                             )}
                             <p className="text-xs text-gray-500 mt-1">
@@ -416,7 +424,7 @@ export default function Admin() {
                           </ul>
                         </div>
                         
-                        <div className="mt-3 flex gap-2">
+                        <div className="mt-3 flex gap-2 flex-wrap">
                           <Button 
                             size="sm" 
                             variant="outline"
@@ -430,6 +438,56 @@ export default function Admin() {
                           >
                             Visit Platform
                           </Button>
+                          {tenant.domain && (
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="secondary"
+                                onClick={() => {
+                                  const dnsInstructions = `DNS Setup Instructions for ${tenant.brandingConfig?.companyName || tenant.name}
+
+Platform URL (Ready): ${tenant.subdomain}.xauti-platform.replit.app
+Custom Domain: ${tenant.domain}
+
+DNS Record Required:
+Type: CNAME
+Name: ${tenant.domain}
+Value: ${tenant.subdomain}.xauti-platform.replit.app
+
+Steps:
+1. Log into your domain registrar (GoDaddy, Namecheap, etc.)
+2. Go to DNS Management
+3. Add a CNAME record with the details above
+4. Save changes (propagation takes 24-48 hours)
+
+For SSL on custom domains:
+- Use Cloudflare for free SSL certificates
+- Or contact your hosting provider
+
+Complete guide: ${window.location.origin}/DNS_SETUP_GUIDE.md
+
+Need help? Forward these instructions to your client.`;
+                                  
+                                  navigator.clipboard.writeText(dnsInstructions);
+                                  toast({
+                                    title: "DNS Instructions Copied",
+                                    description: "Share these instructions with your client",
+                                  });
+                                }}
+                              >
+                                Copy DNS Setup
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  window.open(`${window.location.origin}/DNS_SETUP_GUIDE.md`, '_blank');
+                                }}
+                              >
+                                View Full Guide
+                              </Button>
+                            </>
+                          )}
                           <Button 
                             size="sm" 
                             variant="destructive"
