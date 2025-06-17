@@ -63,18 +63,21 @@ const tenantMiddleware = async (req: TenantRequest, res: Response, next: NextFun
       return next();
     }
     
-    const subdomain = host.split('.')[0];
-    console.log('Checking subdomain:', subdomain);
+    // First check if this is a custom domain
+    let tenant = await storage.getTenantByDomain(host);
     
-    // Only look up tenant for production subdomains
-    if (subdomain && host.includes('.') && !host.includes('localhost') && !host.includes('replit')) {
-      const tenant = await storage.getTenantBySubdomain(subdomain);
+    if (!tenant) {
+      // If not a custom domain, check if it's a subdomain
+      const subdomain = host.split('.')[0];
+      console.log('Checking subdomain:', subdomain);
       
-      if (!tenant || !tenant.isActive) {
-        console.log('Tenant not found for subdomain:', subdomain);
-        return res.status(404).json({ error: 'Tenant not found or inactive' });
+      // Only look up tenant for production subdomains
+      if (subdomain && host.includes('.') && !host.includes('localhost') && !host.includes('replit')) {
+        tenant = await storage.getTenantBySubdomain(subdomain);
       }
-      
+    }
+    
+    if (tenant && tenant.isActive) {
       console.log('Found tenant:', tenant.name);
       req.tenant = tenant;
       
