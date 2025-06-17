@@ -252,6 +252,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tenant branding info
+  app.get("/api/tenant/branding", async (req: TenantRequest, res) => {
+    try {
+      if (req.tenant) {
+        const branding = req.tenant.brandingConfig || {};
+        return res.json({
+          companyName: branding.companyName || req.tenant.name,
+          logo: branding.logo,
+          primaryColor: branding.primaryColor,
+          secondaryColor: branding.secondaryColor
+        });
+      }
+      
+      // Default branding
+      return res.json({
+        companyName: "Xauti",
+        logo: null,
+        primaryColor: null,
+        secondaryColor: null
+      });
+    } catch (error) {
+      console.error('Branding fetch error:', error);
+      return res.json({
+        companyName: "Xauti",
+        logo: null,
+        primaryColor: null,
+        secondaryColor: null
+      });
+    }
+  });
+
   // DNS checker endpoint
   app.post("/api/admin/check-dns", async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,25 @@ export default function Landing() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState(false);
+  const [branding, setBranding] = useState({
+    companyName: "Xauti",
+    logo: null,
+    primaryColor: null,
+    secondaryColor: null
+  });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: ""
   });
+
+  useEffect(() => {
+    // Fetch tenant branding information
+    fetch("/api/tenant/branding")
+      .then(res => res.json())
+      .then(data => setBranding(data))
+      .catch(error => console.error('Failed to fetch branding:', error));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +108,7 @@ export default function Landing() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Xauti</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{branding.companyName}</h1>
           <p className="text-xl text-gray-600">Content Generator</p>
           <p className="text-sm text-gray-500 mt-2">Build your 30-day content streak</p>
         </div>
