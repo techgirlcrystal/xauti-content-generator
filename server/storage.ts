@@ -7,6 +7,7 @@ export interface IStorage {
   createTenant(tenant: InsertTenant): Promise<Tenant>;
   getTenant(id: number): Promise<Tenant | undefined>;
   getAllTenants(): Promise<Tenant[]>;
+  deleteTenant(id: number): Promise<void>;
   getTenantByDomain(domain: string): Promise<Tenant | undefined>;
   getTenantBySubdomain(subdomain: string): Promise<Tenant | undefined>;
   updateTenant(id: number, updates: Partial<Tenant>): Promise<Tenant>;
@@ -51,6 +52,10 @@ export class DatabaseStorage implements IStorage {
   async getAllTenants(): Promise<Tenant[]> {
     const allTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
     return allTenants;
+  }
+
+  async deleteTenant(id: number): Promise<void> {
+    await db.delete(tenants).where(eq(tenants.id, id));
   }
 
   async getTenantByDomain(domain: string): Promise<Tenant | undefined> {

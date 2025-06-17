@@ -65,6 +65,25 @@ export default function Admin() {
   });
 
   // Create tenant mutation
+  // Delete tenant mutation
+  const deleteTenantMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/tenants/${id}`),
+    onSuccess: () => {
+      toast({
+        title: "Client Deleted",
+        description: "White label client has been removed successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/tenants"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete client",
+        variant: "destructive",
+      });
+    },
+  });
+
   const createTenantMutation = useMutation({
     mutationFn: (tenant: CreateTenantForm) => {
       // Generate unique subdomain from company name
@@ -223,10 +242,20 @@ export default function Admin() {
                     />
                     {newTenant.customDomain && newTenant.companyName && (
                       <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
-                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">DNS Setup</p>
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">DNS Setup Instructions</p>
                         <code className="block mt-1 text-xs bg-blue-100 dark:bg-blue-800 p-2 rounded">
                           CNAME: {newTenant.customDomain} → {generateSubdomain(newTenant.companyName)}.xauti-platform.replit.app
                         </code>
+                        <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
+                          <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium">SSL Certificate Note:</p>
+                          <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                            Custom domains will show "Not Secure" initially. For SSL certificates, clients need to:
+                          </p>
+                          <ul className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 list-disc list-inside">
+                            <li>Use platform subdomain for immediate SSL</li>
+                            <li>Or setup Cloudflare for custom domain SSL</li>
+                          </ul>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -286,13 +315,20 @@ export default function Admin() {
 
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
                   <h4 className="font-semibold mb-2">What Each Client Gets:</h4>
-                  <ul className="text-sm space-y-1">
+                  <ul className="text-sm space-y-1 mb-3">
                     <li>• Their own branded login page for customers</li>
                     <li>• Completely isolated user database</li>
                     <li>• Custom domain support</li>
                     <li>• Independent payment processing</li>
                     <li>• Full control over customer pricing</li>
                   </ul>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                    <h5 className="font-medium text-sm mb-2">Client Login Access:</h5>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Clients don't need login credentials - you just set them up once. Their customers create accounts directly on their branded platform. The client owns and manages all their customer data independently.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
@@ -375,8 +411,17 @@ export default function Admin() {
                           >
                             Visit Platform
                           </Button>
-                          <Button size="sm" variant="outline">
-                            Manage Settings
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Delete ${tenant.brandingConfig?.companyName || tenant.name}? This cannot be undone.`)) {
+                                deleteTenantMutation.mutate(tenant.id);
+                              }
+                            }}
+                            disabled={deleteTenantMutation.isPending}
+                          >
+                            {deleteTenantMutation.isPending ? "Deleting..." : "Delete"}
                           </Button>
                         </div>
                       </div>

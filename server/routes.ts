@@ -213,6 +213,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/admin/tenants/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteTenant(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to delete tenant" });
+    }
+  });
+
   // Basic test endpoint
   app.post("/api/basic-test", (req, res) => {
     res.json({ success: true, message: "Basic POST endpoint working", body: req.body });
