@@ -196,9 +196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes for managing white label clients
   app.get("/api/admin/tenants", async (req, res) => {
     try {
-      // Only allow master tenant admin access
-      const tenants = await storage.getTenant(1); // Implement getAllTenants method
-      res.json([]);
+      const tenants = await storage.getAllTenants();
+      res.json(tenants);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch tenants" });
     }
