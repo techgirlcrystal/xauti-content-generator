@@ -380,27 +380,71 @@ export default function History() {
                           Download Scripts
                         </Button>
                       )}
+                      
+                      <Button
+                        onClick={() => deleteContentRequest(request.id)}
+                        variant="outline"
+                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        disabled={deletingId === request.id}
+                      >
+                        {deletingId === request.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
+                        Delete
+                      </Button>
                     </div>
                   )}
 
                   {/* Failed Status */}
                   {request.status === 'failed' && (
-                    <Alert className="bg-red-50 border-red-200">
-                      <XCircle className="w-4 h-4 text-red-600" />
-                      <AlertDescription className="text-red-800">
-                        This generation failed to complete. You can try generating new content from the home page.
-                      </AlertDescription>
-                    </Alert>
+                    <div className="space-y-3">
+                      <Alert className="bg-red-50 border-red-200">
+                        <XCircle className="w-4 h-4 text-red-600" />
+                        <AlertDescription className="text-red-800">
+                          This generation failed to complete. You can try generating new content from the home page.
+                        </AlertDescription>
+                      </Alert>
+                      <Button
+                        onClick={() => deleteContentRequest(request.id)}
+                        variant="outline"
+                        className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        disabled={deletingId === request.id}
+                      >
+                        {deletingId === request.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
+                        Remove Failed Request
+                      </Button>
+                    </div>
                   )}
 
                   {/* Processing Status */}
                   {request.status === 'processing' && (
-                    <Alert className="bg-blue-50 border-blue-200">
-                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                      <AlertDescription className="text-blue-800">
-                        This generation is still in progress. Check back in a few minutes.
-                      </AlertDescription>
-                    </Alert>
+                    <div className="space-y-3">
+                      <Alert className="bg-blue-50 border-blue-200">
+                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                        <AlertDescription className="text-blue-800">
+                          This generation is still in progress. Check back in a few minutes.
+                        </AlertDescription>
+                      </Alert>
+                      <Button
+                        onClick={() => deleteContentRequest(request.id)}
+                        variant="outline"
+                        className="w-full border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800"
+                        disabled={deletingId === request.id}
+                      >
+                        {deletingId === request.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
+                        Cancel Processing Request
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
