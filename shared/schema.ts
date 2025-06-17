@@ -34,6 +34,8 @@ export const users = pgTable("users", {
   subscriptionTier: text("subscription_tier").default("free"), // free, basic, pro, unlimited
   generationsUsed: integer("generations_used").default(0),
   generationsLimit: integer("generations_limit").default(0),
+  scriptGenerationsUsed: integer("script_generations_used").default(0),
+  scriptGenerationsLimit: integer("script_generations_limit").default(0),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status").default("inactive"), // active, inactive, canceled, past_due

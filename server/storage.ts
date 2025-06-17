@@ -196,15 +196,17 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async addGenerationsToUser(id: number, generations: number): Promise<User> {
+  async addGenerationsToUser(id: number, generations: number, type: 'content' | 'script' = 'content'): Promise<User> {
     const currentUser = await this.getUser(id);
     if (!currentUser) throw new Error('User not found');
     
+    const updateFields = type === 'script' 
+      ? { scriptGenerationsLimit: (currentUser.scriptGenerationsLimit || 0) + generations }
+      : { generationsLimit: (currentUser.generationsLimit || 0) + generations };
+    
     const [user] = await db
       .update(users)
-      .set({ 
-        generationsLimit: (currentUser.generationsLimit || 0) + generations
-      })
+      .set(updateFields)
       .where(eq(users.id, id))
       .returning();
     return user;

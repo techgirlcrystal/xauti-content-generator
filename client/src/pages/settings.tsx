@@ -387,12 +387,17 @@ export default function Settings() {
             <div className="bg-blue-50 border border-blue-200 rounded p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-blue-900">Current Balance</span>
-                <span className="text-lg font-bold text-blue-900">
-                  {currentUser.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (currentUser.generationsLimit || 0) - (currentUser.generationsUsed || 0))} generations left
-                </span>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-blue-900">
+                    {currentUser.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (currentUser.generationsLimit || 0) - (currentUser.generationsUsed || 0))} content
+                  </div>
+                  <div className="text-lg font-bold text-purple-900">
+                    {currentUser.subscriptionTier === 'unlimited' ? '∞' : Math.max(0, (currentUser.scriptGenerationsLimit || 0) - (currentUser.scriptGenerationsUsed || 0))} script
+                  </div>
+                </div>
               </div>
               <p className="text-xs text-blue-700">
-                Subscription: {currentUser.subscriptionTier || 'Free'} ({currentUser.generationsLimit || 0} monthly limit)
+                Subscription: {currentUser.subscriptionTier || 'Free'} ({currentUser.generationsLimit || 0} content + {currentUser.scriptGenerationsLimit || 0} script generations)
               </p>
             </div>
 

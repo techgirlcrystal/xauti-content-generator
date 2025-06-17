@@ -1516,8 +1516,8 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
               paymentStatus: "completed"
             });
 
-            // Add generations to user's account
-            await storage.addGenerationsToUser(userId, generationCount);
+            // Add content generations to user's account
+            await storage.addGenerationsToUser(userId, generationCount, 'content');
             
             console.log(`Added ${generationCount} content generations to user ${userId}`);
             
@@ -1534,7 +1534,7 @@ Last Modified: ${new Date(responseData.modifiedTime).toLocaleDateString()}`;
             });
 
             // Add script generations to user's account
-            await storage.addGenerationsToUser(userId, scriptCount);
+            await storage.addGenerationsToUser(userId, scriptCount, 'script');
             
             console.log(`Added ${scriptCount} script generations to user ${userId}`);
           }
