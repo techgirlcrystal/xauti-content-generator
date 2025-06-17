@@ -673,6 +673,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsAuth: true
           });
         }
+        
+        // Update user's name if it's different (in case they want to change their display name)
+        if (user.name !== name) {
+          user = await storage.updateUserSubscription(user.id, { name });
+        }
       }
 
       // CRITICAL: Real-time tag verification and automatic tier assignment
